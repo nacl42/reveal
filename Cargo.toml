@@ -1,0 +1,10 @@
+[package]
+name = "reveal"
+version = "0.1.0"
+authors = ["sreblov <code@sreblov.de>"]
+edition = "2018"
+license = "MIT/Apache-2.0"
+description = "A two-dimensional, turn-based, roguelike adventure game"
+
+[dependencies]
+macroquad = "0.3.0"
