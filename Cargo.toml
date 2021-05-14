@@ -8,3 +8,4 @@ description = "A two-dimensional, turn-based, roguelike adventure game"
 
 [dependencies]
 macroquad = "0.3.0"
+maplit = "1.0"

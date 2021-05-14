@@ -7,6 +7,9 @@ use effect::{TextEffect, ScaleText};
 mod tileset;
 use tileset::{Tileset, Pattern};
 
+mod layer;
+use layer::{Layer, generate_layer};
+
 fn window_conf() -> Conf {
     Conf {
         window_title: "Reveal".to_owned(),
@@ -18,7 +21,8 @@ fn window_conf() -> Conf {
 async fn main() {
     println!("You are in a cave and there is no light.");
 
-    println!("Press <q> to quit, <up> to move text up, <s> to scale text!");
+    println!("Press <q> to quit and <s> to scale text!");
+    println!("...and of course <up>, <down>, <left>, <right> to move the map!");
     
     // load assets
     let font = load_ttf_font("assets/DejaVuSerif.ttf").await;
@@ -32,14 +36,16 @@ async fn main() {
     // sample text effect (proof of concept)
     let mut effects: Vec<Box<dyn TextEffect>> = vec!();
 
-    // pattern and tileset
+    // pattern, tileset, layer
     let (width, height) = (32.0, 32.0);
     let pattern = Pattern::Matrix {
         width, height,
         rows: 2, columns: 2
     };
     let tileset = Tileset::new("assets/tileset32.png", &pattern).await.unwrap();
-
+    let layer = generate_layer();
+    let (mut off_x, mut off_y) = (0, 0);
+    
     // main loop
     let mut last_update = get_time();
     const DELTA: f64 = 0.05;
@@ -49,7 +55,7 @@ async fn main() {
         // update, if necessary
         if get_time() - last_update > DELTA {
             last_update = get_time();
-            y += 1.0;
+            //y += 1.0;
 
             if is_key_down(KeyCode::Q) {
                 println!("GOODBYE");
@@ -57,9 +63,23 @@ async fn main() {
             }
 
             if is_key_down(KeyCode::Up) {
-                if y > 5.0 {
-                    y -= 5.0;   
+                if (off_y > 0) {
+                    off_y -= 1;
                 }
+            }
+
+            if is_key_down(KeyCode::Left) {
+                if (off_x > 0) {
+                    off_x -= 1;
+                }
+            }
+
+            if is_key_down(KeyCode::Right) {
+                off_x += 1;
+            }
+
+            if is_key_down(KeyCode::Down) {
+                off_y += 1;
             }
 
             if is_key_down(KeyCode::S) {
@@ -80,16 +100,17 @@ async fn main() {
         clear_background(WHITE);
 
         // draw map
-        let (base_x, base_y) = (50.0, 50.0);
-        let (sep_x, sep_y) = (1.0, 1.0);
+        let (base_x, base_y) = (10.0, 70.0);
+        let (sep_x, sep_y) = (0.0, 0.0);
         let (tiles_x, tiles_y) = (16, 12);
         let mut py = base_y;
         
         for y in 0..tiles_y {
             let mut px = base_x;
             for x in 0..tiles_x {
-                px += width + sep_x;
-                if let Some(index) = Some(&0) {
+                if let Some(index) = layer.get(
+                    &(x as i16 + off_x, y as i16 + off_y)
+                ) {
                     match tileset.sources.get(*index) {
                         Some(&source) => {
                             let mut params = DrawTextureParams {
@@ -106,6 +127,7 @@ async fn main() {
                         _ => {}
                     }
                 };
+                px += width + sep_x;
             }
             py += height + sep_y;
         }
