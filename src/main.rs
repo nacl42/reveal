@@ -9,6 +9,10 @@ use tileset::{Tileset, Pattern};
 
 mod layer;
 
+use std::collections::HashMap;
+use maplit::hashmap;
+
+
 fn window_conf() -> Conf {
     Conf {
         window_title: "Reveal".to_owned(),
@@ -48,6 +52,23 @@ async fn main() {
         rows: 2, columns: 6
     };
     let tileset = Tileset::new("assets/tileset32.png", &pattern).await.unwrap();
+
+    // item tileset
+    let pattern = Pattern::Matrix {
+        width, height,
+        rows: 3, columns: 4
+            
+    };
+    let tileset_items = Tileset::new("assets/items32.png", &pattern).await.unwrap();
+
+    // item map (just an example)
+    let item_places: HashMap<_, Vec<_>> = hashmap! {
+        (5, 8) => vec![5, 6],
+        (6, 8) => vec![5],
+        (7, 9) => vec![2],
+        (20, 10) => vec![3]
+    };
+    
     //let layer = generate_layer();
     let layer = layer::read_layer_from_file("assets/sample.layer").unwrap();
     let (mut off_x, mut off_y) = (0, 0);
@@ -129,13 +150,16 @@ async fn main() {
 
         // draw map onto texture
         clear_background(BLACK);
+
+        // background
         let mut py = 0.0;
         for y in 0..tiles_y {
             let mut px = 0.0;
             for x in 0..tiles_x {
-                if let Some(index) = layer.get(
-                    &(x as i16 + off_x, y as i16 + off_y)
-                ) {
+                let tile_xy = (x as i16 + off_x, y as i16 + off_y);
+                
+                // draw background
+                if let Some(index) = layer.get(&tile_xy) {
                     match tileset.sources.get(*index) {
                         Some(&source) => {
                             draw_texture_ex(
@@ -150,6 +174,26 @@ async fn main() {
                         _ => {}
                     }
                 };
+
+                // draw items
+                if let Some(indices) = item_places.get(&tile_xy) {
+                    for index in indices {
+                        match tileset_items.sources.get(*index) {
+                            Some(&source) => {
+                                draw_texture_ex(
+                                    tileset_items.texture, px, py, WHITE,
+                                    DrawTextureParams {
+                                        dest_size: Some(Vec2::new(width, height)),
+                                        source: Some(source),
+                                        ..Default::default()
+                                    }
+                                )
+                            },
+                            _ => {}
+                        }
+                    }
+                }
+                
                 px += width + sep.x;
             }
             py += height + sep.y;
