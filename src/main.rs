@@ -43,10 +43,11 @@ async fn main() {
     let (width, height) = (32.0, 32.0);
     let pattern = Pattern::Matrix {
         width, height,
-        rows: 2, columns: 2
+        rows: 2, columns: 6
     };
     let tileset = Tileset::new("assets/tileset32.png", &pattern).await.unwrap();
-    let layer = generate_layer();
+    //let layer = generate_layer();
+    let layer = layer::read_layer_from_file("assets/sample.layer").unwrap();
     let (mut off_x, mut off_y) = (0, 0);
     
     // main loop
@@ -213,12 +214,13 @@ void main() {
     vec2 crtUV = CRTCurveUV(uv);
     
     vec3 res = texture2D(Texture, uv).rgb * color.rgb;
- 	
+	
     if (crtUV.x < 0.0 || crtUV.x > 1.0 || crtUV.y < 0.0 || crtUV.y > 1.0)
     {
         res = vec3(0.0, 0.0, 0.0);
     } 
     DrawVignette(res, crtUV);
+    // NV: commented out scanlines
     //DrawScanline(res, uv);
     gl_FragColor = vec4(res, 1.0);
 

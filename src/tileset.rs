@@ -39,8 +39,8 @@ impl Tileset {
         let mut sources = Vec::<Rect>::new();
         match pattern {
             &Pattern::Matrix { rows, columns, width, height } => {
-                for x in 0..columns {
-                    for y in 0..rows {
+                for y in 0..rows {
+                    for x in 0..columns {
                         sources.push(Rect::new(
                             x as f32 * width, y as f32 * height,
                             width, height
