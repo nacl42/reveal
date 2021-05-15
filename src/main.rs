@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use macroquad::{input, window};
+//use macroquad::{input, window};
 
 mod effect;
 use effect::{TextEffect, ScaleText};
@@ -8,7 +8,7 @@ mod tileset;
 use tileset::{Tileset, Pattern};
 
 mod layer;
-use layer::{Layer, generate_layer};
+use layer::{generate_layer};
 
 fn window_conf() -> Conf {
     Conf {
@@ -25,7 +25,7 @@ async fn main() {
     println!("...and of course <up>, <down>, <left>, <right> to move the map!");
     
     // load assets
-    let font = load_ttf_font("assets/DejaVuSerif.ttf").await;
+    let font = load_ttf_font("assets/DejaVuSerif.ttf").await.unwrap();
     let mut params = TextParams {
         font,
         font_size: 24,
@@ -63,22 +63,16 @@ async fn main() {
             }
 
             if is_key_down(KeyCode::Up) {
-                if (off_y > 0) {
+                if off_y > 0 {
                     off_y -= 1;
                 }
-            }
-
-            if is_key_down(KeyCode::Left) {
-                if (off_x > 0) {
+            } else if is_key_down(KeyCode::Left) {
+                if off_x > 0 {
                     off_x -= 1;
                 }
-            }
-
-            if is_key_down(KeyCode::Right) {
+            } else if is_key_down(KeyCode::Right) {
                 off_x += 1;
-            }
-
-            if is_key_down(KeyCode::Down) {
+            } else if is_key_down(KeyCode::Down) {
                 off_y += 1;
             }
 
@@ -99,38 +93,67 @@ async fn main() {
         // redraw
         clear_background(WHITE);
 
-        // draw map
-        let (base_x, base_y) = (10.0, 70.0);
-        let (sep_x, sep_y) = (0.0, 0.0);
+        // --- map drawing --
+        let base = vec2(10.0, 70.0);
+        let sep = vec2(0.0, 0.0);
         let (tiles_x, tiles_y) = (16, 12);
-        let mut py = base_y;
         
+        // EXPERIMENTAL: render map to texture, not to screen
+        let map_size = vec2(
+            (tiles_x as f32 * (width + sep.x)) as f32,
+            (tiles_y as f32 * (height + sep.y)) as f32
+        );
+        let render_target = render_target(
+            map_size.x as u32,
+            map_size.y as u32
+        );
+        render_target.texture.set_filter(FilterMode::Nearest);
+
+        let mut camera = Camera2D::from_display_rect(
+            Rect::new(0.0, 0.0, map_size.x, map_size.y));
+        camera.render_target = Some(render_target);
+        set_camera(&camera);
+
+        // draw map onto texture
+        let mut py = 0.0;
         for y in 0..tiles_y {
-            let mut px = base_x;
+            let mut px = 0.0;
             for x in 0..tiles_x {
                 if let Some(index) = layer.get(
                     &(x as i16 + off_x, y as i16 + off_y)
                 ) {
                     match tileset.sources.get(*index) {
                         Some(&source) => {
-                            let mut params = DrawTextureParams {
-                                dest_size: Some(Vec2::new(width, height)),
-                                source: Some(source),
-                                ..Default::default()
-                            };
-
                             draw_texture_ex(
                                 tileset.texture, px, py, WHITE,
-                                params
+                                DrawTextureParams {
+                                    dest_size: Some(Vec2::new(width, height)),
+                                    source: Some(source),
+                                    ..Default::default()
+                                }
                             )
                         },
                         _ => {}
                     }
                 };
-                px += width + sep_x;
+                px += width + sep.x;
             }
-            py += height + sep_y;
+            py += height + sep.y;
         }
+
+        // draw texture on screen
+        set_default_camera();
+
+        draw_texture_ex(
+            render_target.texture,
+            base.x,
+            base.y,
+            WHITE,
+            DrawTextureParams {
+                flip_y: true, // this is a temporary workaround
+                ..Default::default()
+            }
+        );
 
         // draw text
         draw_text_ex(
