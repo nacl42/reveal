@@ -8,7 +8,6 @@ mod tileset;
 use tileset::{Tileset, Pattern};
 
 mod layer;
-use layer::{generate_layer};
 
 fn window_conf() -> Conf {
     Conf {
@@ -36,6 +35,9 @@ async fn main() {
     let material = load_material( CRT_VERTEX_SHADER,
         CRT_FRAGMENT_SHADER, Default::default() ).unwrap();
 
+    // the map render target will be initialised in the main loop
+    let mut target: Option<RenderTarget> = None;
+        
     // sample text effect (proof of concept)
     let mut effects: Vec<Box<dyn TextEffect>> = vec!();
 
@@ -107,18 +109,26 @@ async fn main() {
             (tiles_x as f32 * (width + sep.x)) as f32,
             (tiles_y as f32 * (height + sep.y)) as f32
         );
-        let render_target = render_target(
-            map_size.x as u32,
-            map_size.y as u32
-        );
-        render_target.texture.set_filter(FilterMode::Nearest);
 
+        // render target for map drawing
+        if target.is_none() {
+            let _target = render_target(
+                map_size.x as u32,
+                map_size.y as u32
+            );
+            _target.texture.set_filter(FilterMode::Nearest);
+            target = Some(_target);
+        };
+
+        // set camera, so that drawing operations act
+        // on the texture
         let mut camera = Camera2D::from_display_rect(
             Rect::new(0.0, 0.0, map_size.x, map_size.y));
-        camera.render_target = Some(render_target);
+        camera.render_target = Some(target.unwrap());
         set_camera(&camera);
 
         // draw map onto texture
+        clear_background(BLACK);
         let mut py = 0.0;
         for y in 0..tiles_y {
             let mut px = 0.0;
@@ -151,12 +161,13 @@ async fn main() {
         gl_use_material(material);
 
         draw_texture_ex(
-            render_target.texture,
+            target.unwrap().texture,
             base.x,
             base.y,
             WHITE,
             DrawTextureParams {
                 flip_y: true, // this is a temporary workaround
+                dest_size: Some(map_size),
                 ..Default::default()
             }
         );
@@ -164,6 +175,13 @@ async fn main() {
         gl_use_default_material();
 
         // draw text
+        let mut params2 = params.clone();
+        params2.color = LIGHTGRAY;
+
+        draw_text_ex(
+            "Reveal - Mystic Land of Magic and Adventure", x+1.0, y+1.0, params2
+        );
+
         draw_text_ex(
             "Reveal - Mystic Land of Magic and Adventure", x, y, params
         );
