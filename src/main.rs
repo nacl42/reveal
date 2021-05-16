@@ -31,6 +31,9 @@ const CRT_FRAGMENT_SHADER: &'static str =
 const CRT_VERTEX_SHADER: &'static str =
     include_str!("shaders/vignette_vertex.glsl");
 
+const BW_FRAGMENT_SHADER: &'static str =
+    include_str!("shaders/bw_fragment.glsl");
+
 
 fn tile_class_index(tile: &Tile) -> usize {
     match tile.kind {
@@ -78,8 +81,17 @@ async fn main() {
         ..Default::default()
     };
 
-    let material = load_material( CRT_VERTEX_SHADER,
-        CRT_FRAGMENT_SHADER, Default::default() ).unwrap();
+    let material_vignette = load_material(
+        CRT_VERTEX_SHADER,
+        CRT_FRAGMENT_SHADER,
+        Default::default()
+    ).unwrap();
+
+    let material_bw = load_material(
+        CRT_VERTEX_SHADER,
+        BW_FRAGMENT_SHADER,
+        Default::default()
+    ).unwrap();
 
     // the map render target will be initialised in the main loop
     let mut target: Option<RenderTarget> = None;
@@ -277,7 +289,7 @@ async fn main() {
         // draw texture on screen
         set_default_camera();
 
-        gl_use_material(material);
+        gl_use_material(material_vignette);
 
         draw_texture_ex(
             target.unwrap().texture,
