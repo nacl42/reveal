@@ -12,6 +12,8 @@ mod layer;
 use std::collections::HashMap;
 use maplit::hashmap;
 
+mod tile;
+use tile::{TileKind, Tile};
 
 fn window_conf() -> Conf {
     Conf {
@@ -28,6 +30,21 @@ const CRT_VERTEX_SHADER: &'static str =
     include_str!("shaders/vignette_vertex.glsl");
 
 
+fn tile_to_index(tile: &Tile) -> usize {
+    match tile.kind {
+        TileKind::Grass => 0,
+        TileKind::Hedge => 5,
+        TileKind::StoneFloor => 7,
+        TileKind::Path => 1,
+        TileKind::ThickGrass => 6,
+        TileKind::Water => 2,
+        TileKind::Wall => 3,
+        TileKind::ShallowWater => 8,
+        TileKind::Door(_) => 10,
+        TileKind::Window => 11,
+        _ => 0
+    }
+}
 
 #[macroquad::main(window_conf)]
 async fn main() {
@@ -79,7 +96,7 @@ async fn main() {
     };
     
     //let layer = generate_layer();
-    let layer = layer::read_layer_from_file("assets/sample.layer").unwrap();
+    let layer = layer::read_tile_layer_from_file("assets/sample.layer").unwrap();
     let (mut off_x, mut off_y) = (0, 0);
     
     // main loop
@@ -168,8 +185,9 @@ async fn main() {
                 let tile_xy = (x as i16 + off_x, y as i16 + off_y);
                 
                 // draw background
-                if let Some(index) = layer.get(&tile_xy) {
-                    match tileset.sources.get(*index) {
+                if let Some(index) = layer.get(&tile_xy)
+                    .map(|tile| tile_to_index(tile) ) {
+                        match tileset.sources.get(index) {
                         Some(&source) => {
                             draw_texture_ex(
                                 tileset.texture, px, py, WHITE,
