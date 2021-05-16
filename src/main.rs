@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use maplit::hashmap;
 
 mod tile;
-use tile::{TileKind, Tile};
+use tile::{TileKind, Tile, TileFeature};
 
 fn window_conf() -> Conf {
     Conf {
@@ -30,7 +30,7 @@ const CRT_VERTEX_SHADER: &'static str =
     include_str!("shaders/vignette_vertex.glsl");
 
 
-fn tile_to_index(tile: &Tile) -> usize {
+fn tile_class_index(tile: &Tile) -> usize {
     match tile.kind {
         TileKind::Grass => 0,
         TileKind::Hedge => 5,
@@ -43,6 +43,20 @@ fn tile_to_index(tile: &Tile) -> usize {
         TileKind::Door(_) => 10,
         TileKind::Window => 11,
         _ => 0
+    }
+}
+
+fn tile_feature_index(tile: &Tile) -> Option<usize> {
+    if let Some(feature) = &tile.feature {
+        let index = match feature {
+            TileFeature::Mushroom => 14,
+            TileFeature::Flower => 28,
+            TileFeature::Stones => 7,
+            TileFeature::Waterlily => 21
+        };
+        Some(index)
+    } else {
+        None
     }
 }
 
@@ -78,6 +92,15 @@ async fn main() {
         rows: 2, columns: 6
     };
     let tileset = Tileset::new("assets/tileset32.png", &pattern).await.unwrap();
+
+    // feature tileset
+    let pattern = Pattern::Matrix {
+        width, height,
+        rows: 9, columns: 7
+    };
+    let tileset_features = Tileset::new(
+        "assets/features32.png", &pattern
+    ).await.unwrap();
 
     // item tileset
     let pattern = Pattern::Matrix {
@@ -184,15 +207,19 @@ async fn main() {
             for x in 0..tiles_x {
                 let tile_xy = (x as i16 + off_x, y as i16 + off_y);
                 
-                // draw background
-                if let Some(index) = layer.get(&tile_xy)
-                    .map(|tile| tile_to_index(tile) ) {
-                        match tileset.sources.get(index) {
+                // draw tile
+                if let Some(tile) = layer.get(&tile_xy) {
+
+                    // background
+                    let index = tile_class_index(&tile);
+                    match tileset.sources.get(index) {
                         Some(&source) => {
                             draw_texture_ex(
                                 tileset.texture, px, py, WHITE,
                                 DrawTextureParams {
-                                    dest_size: Some(Vec2::new(width, height)),
+                                    dest_size: Some(
+                                        Vec2::new(width, height)
+                                    ),
                                     source: Some(source),
                                     ..Default::default()
                                 }
@@ -200,17 +227,17 @@ async fn main() {
                         },
                         _ => {}
                     }
-                };
 
-                // draw items
-                if let Some(indices) = item_places.get(&tile_xy) {
-                    for index in indices {
-                        match tileset_items.sources.get(*index) {
+                    // feature
+                    if let Some(index) = tile_feature_index(&tile) {
+                        match tileset_features.sources.get(index) {
                             Some(&source) => {
                                 draw_texture_ex(
-                                    tileset_items.texture, px, py, WHITE,
+                                    tileset_features.texture, px, py, WHITE,
                                     DrawTextureParams {
-                                        dest_size: Some(Vec2::new(width, height)),
+                                        dest_size: Some(
+                                            Vec2::new(width, height)
+                                        ),
                                         source: Some(source),
                                         ..Default::default()
                                     }
@@ -218,9 +245,27 @@ async fn main() {
                             },
                             _ => {}
                         }
+                    };
+                    
+                    // draw items
+                    if let Some(indices) = item_places.get(&tile_xy) {
+                        for index in indices {
+                            match tileset_items.sources.get(*index) {
+                                Some(&source) => {
+                                    draw_texture_ex(
+                                        tileset_items.texture, px, py, WHITE,
+                                        DrawTextureParams {
+                                            dest_size: Some(Vec2::new(width, height)),
+                                            source: Some(source),
+                                            ..Default::default()
+                                        }
+                                    )
+                                },
+                                _ => {}
+                            }
+                        }
                     }
-                }
-                
+                }                
                 px += width + sep.x;
             }
             py += height + sep.y;

@@ -3,14 +3,29 @@
 #[derive(Debug, Clone)]
 pub struct Tile {
     pub kind: TileKind,
-    pub decor: Option<TileDecor>,
+    pub feature: Option<TileFeature>,
+}
+
+impl Tile {
+    pub fn with(mut self, feature: TileFeature) -> Tile {
+        self.feature = Some(feature);
+        self
+    }
+
+    pub fn set_random_decor(&mut self) {
+        self.feature = match self.kind {
+            TileKind::Grass => Some(TileFeature::Flower),
+            TileKind::ShallowWater => Some(TileFeature::Waterlily),
+            _ => None
+        };
+    }
 }
 
 impl From<TileKind> for Tile {
     fn from(kind: TileKind) -> Tile {
         Tile {
             kind,
-            decor: None
+            feature: None
         }
     }
 }
@@ -19,7 +34,7 @@ impl From<&TileKind> for Tile {
     fn from(kind: &TileKind) -> Tile {
         Tile {
             kind: kind.clone(),
-            decor: None
+            feature: None
         }
     }
 }
@@ -44,8 +59,9 @@ pub enum TileKind {
 pub enum DoorState { Open, Closed, Locked }
 
 #[derive(Debug, Clone)]
-pub enum TileDecor {
+pub enum TileFeature {
     Mushroom,
+    Flower,
     Waterlily,
     Stones
 }
