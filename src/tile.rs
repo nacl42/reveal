@@ -1,4 +1,4 @@
-
+use rand::Rng;
 
 #[derive(Debug, Clone)]
 pub struct Tile {
@@ -13,8 +13,9 @@ impl Tile {
     }
 
     pub fn set_random_decor(&mut self) {
+        let mut rng = rand::thread_rng();
         self.feature = match self.kind {
-            TileKind::Grass => Some(TileFeature::Flower),
+            TileKind::Grass => Some(TileFeature::Flower(rng.gen_range(0..7))),
             TileKind::ShallowWater => Some(TileFeature::Waterlily),
             _ => None
         };
@@ -61,7 +62,7 @@ pub enum DoorState { Open, Closed, Locked }
 #[derive(Debug, Clone)]
 pub enum TileFeature {
     Mushroom,
-    Flower,
+    Flower(u8),
     Waterlily,
     Stones
 }

@@ -18,6 +18,8 @@ use tile::{TileKind, Tile, TileFeature};
 fn window_conf() -> Conf {
     Conf {
         window_title: "Reveal".to_owned(),
+        window_width: 1024,
+        window_height: 800,
         ..Default::default()
     }
 }
@@ -34,14 +36,14 @@ fn tile_class_index(tile: &Tile) -> usize {
     match tile.kind {
         TileKind::Grass => 0,
         TileKind::Hedge => 5,
-        TileKind::StoneFloor => 7,
+        TileKind::StoneFloor => 11,
         TileKind::Path => 1,
-        TileKind::ThickGrass => 6,
+        TileKind::ThickGrass => 10,
         TileKind::Water => 2,
         TileKind::Wall => 3,
-        TileKind::ShallowWater => 8,
-        TileKind::Door(_) => 10,
-        TileKind::Window => 11,
+        TileKind::ShallowWater => 12,
+        TileKind::Door(_) => 14,
+        TileKind::Window => 15,
         _ => 0
     }
 }
@@ -49,10 +51,10 @@ fn tile_class_index(tile: &Tile) -> usize {
 fn tile_feature_index(tile: &Tile) -> Option<usize> {
     if let Some(feature) = &tile.feature {
         let index = match feature {
-            TileFeature::Mushroom => 14,
-            TileFeature::Flower => 28,
-            TileFeature::Stones => 7,
-            TileFeature::Waterlily => 21
+            TileFeature::Mushroom => 20,
+            TileFeature::Flower(n) => (40 + (n % 4) as usize),
+            TileFeature::Stones => 10,
+            TileFeature::Waterlily => 30
         };
         Some(index)
     } else {
@@ -89,26 +91,28 @@ async fn main() {
     let (width, height) = (32.0, 32.0);
     let pattern = Pattern::Matrix {
         width, height,
-        rows: 2, columns: 6
+        columns: 10,
+        rows: 2, 
     };
-    let tileset = Tileset::new("assets/tileset32.png", &pattern).await.unwrap();
+    let tileset = Tileset::new("assets/tileset32.png", pattern).await.unwrap();
 
     // feature tileset
     let pattern = Pattern::Matrix {
         width, height,
-        rows: 9, columns: 7
+        columns: 10,
+        rows: 9, 
     };
     let tileset_features = Tileset::new(
-        "assets/features32.png", &pattern
+        "assets/features32.png", pattern
     ).await.unwrap();
 
     // item tileset
     let pattern = Pattern::Matrix {
         width, height,
-        rows: 3, columns: 4
-            
+        columns: 10,
+        rows: 3,
     };
-    let tileset_items = Tileset::new("assets/items32.png", &pattern).await.unwrap();
+    let tileset_items = Tileset::new("assets/items32.png", pattern).await.unwrap();
 
     // item map (just an example)
     let item_places: HashMap<_, Vec<_>> = hashmap! {
@@ -118,7 +122,6 @@ async fn main() {
         (20, 10) => vec![3]
     };
     
-    //let layer = generate_layer();
     let layer = layer::read_tile_layer_from_file("assets/sample.layer").unwrap();
     let (mut off_x, mut off_y) = (0, 0);
     
@@ -172,7 +175,7 @@ async fn main() {
         // --- map drawing --
         let base = vec2(10.0, 70.0);
         let sep = vec2(0.0, 0.0);
-        let (tiles_x, tiles_y) = (24, 16);
+        let (tiles_x, tiles_y) = (32, 20);
         
         // EXPERIMENTAL: render map to texture, not to screen
         let map_size = vec2(
@@ -210,7 +213,7 @@ async fn main() {
                 // draw tile
                 if let Some(tile) = layer.get(&tile_xy) {
 
-                    // background
+                    // draw background
                     let index = tile_class_index(&tile);
                     match tileset.sources.get(index) {
                         Some(&source) => {
@@ -228,7 +231,7 @@ async fn main() {
                         _ => {}
                     }
 
-                    // feature
+                    // draw feature (if present)
                     if let Some(index) = tile_feature_index(&tile) {
                         match tileset_features.sources.get(index) {
                             Some(&source) => {
