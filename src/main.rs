@@ -70,6 +70,7 @@ async fn main() {
     println!("You are in a cave and there is no light.");
 
     println!("Press <q> to quit and <s> to scale text!");
+    println!("Try <b> to switch color vision.");
     println!("...and of course <up>, <down>, <left>, <right> to move the map!");
     
     // load assets
@@ -92,6 +93,8 @@ async fn main() {
         BW_FRAGMENT_SHADER,
         Default::default()
     ).unwrap();
+
+    let mut is_bw = false;
 
     // the map render target will be initialised in the main loop
     let mut target: Option<RenderTarget> = None;
@@ -139,7 +142,7 @@ async fn main() {
     
     // main loop
     let mut last_update = get_time();
-    const DELTA: f64 = 0.05;
+    const DELTA: f64 = 0.01;
     let (x, mut y) = (10.0, 42.0);
     
     loop {
@@ -151,6 +154,11 @@ async fn main() {
             if is_key_down(KeyCode::Q) {
                 println!("GOODBYE");
                 break;
+            }
+
+            if is_key_pressed(KeyCode::B) {
+                println!("switching color vision");
+                is_bw = !is_bw;
             }
 
             if is_key_down(KeyCode::Up) {
@@ -289,7 +297,11 @@ async fn main() {
         // draw texture on screen
         set_default_camera();
 
-        gl_use_material(material_vignette);
+        
+        match is_bw {
+            false => gl_use_material(material_vignette),
+            true => gl_use_material(material_bw)
+        };
 
         draw_texture_ex(
             target.unwrap().texture,
