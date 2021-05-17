@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use maplit::hashmap;
 use rand::Rng;
+use crate::point::Point;
 
-pub type Layer<T> = HashMap<(i16, i16), T>;
+pub type Layer<T> = HashMap<Point, T>;
 
 use crate::tile::{Tile, TileKind, DoorState};
 
@@ -25,8 +26,8 @@ where P: AsRef<std::path::Path>
         '+' => TileKind::Window, //11,
     };
 
-    let mut x: i16 = 0;
-    let mut y: i16 = 0;
+    let mut x = 0;
+    let mut y = 0;
     let mut hashmap = Layer::new();
     let mut rng = rand::thread_rng();
     for row in text.lines() {
@@ -37,7 +38,7 @@ where P: AsRef<std::path::Path>
                 if rng.gen::<f32>() > 0.95 {
                     tile.set_random_decor();
                 }
-                hashmap.insert((x, y), tile);
+                hashmap.insert((x, y).into(), tile);
             }
             x += 1;
         }

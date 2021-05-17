@@ -7,11 +7,13 @@ mod effect;
 mod tileset;
 mod layer;
 mod tile;
+mod point;
 
 use effect::{TextEffect, ScaleText};
 use tileset::{Tileset, Pattern};
 use tile::{TileKind, Tile, TileFeature};
 use actor::{Actor, ActorKind};
+use point::Point;
 
 const CRT_FRAGMENT_SHADER: &'static str = include_str!("shaders/vignette_fragment.glsl");
 const CRT_VERTEX_SHADER: &'static str = include_str!("shaders/vignette_vertex.glsl");
@@ -134,16 +136,16 @@ async fn main() {
     // actor map (just an example)
     let player = Actor {
         kind: ActorKind::Player,
-        pos: (2, 3),
+        pos: (2, 3).into(),
     };
     let mut actors: HashMap<usize, Actor> = hashmap! { 0 => player };
         
     // item map (just an example)
-    let item_places: HashMap<_, Vec<_>> = hashmap! {
-        (5, 8) => vec![5, 6],
-        (6, 8) => vec![5],
-        (7, 9) => vec![2],
-        (20, 10) => vec![3]
+    let item_places: HashMap<Point, Vec<_>> = hashmap! {
+        (5, 8).into() => vec![5, 6],
+        (6, 8).into() => vec![5],
+        (7, 9).into() => vec![2],
+        (20, 10).into() => vec![3]
     };
     
     let layer = layer::read_tile_layer_from_file("assets/sample.layer").unwrap();
@@ -196,26 +198,26 @@ async fn main() {
             // ASDW => move player
             if is_key_pressed(KeyCode::A) {
                 if let Some(mut player) = actors.get_mut(&0) {
-                    if player.pos.0 > 0 {
-                        player.pos.0 -= 1;
+                    if player.pos.x > 0 {
+                        player.pos.x -= 1;
                     }
                 }
             }
             if is_key_pressed(KeyCode::W) {
                 if let Some(mut player) = actors.get_mut(&0) {
-                    if player.pos.1 > 0 {
-                        player.pos.1 -= 1;
+                    if player.pos.y > 0 {
+                        player.pos.y -= 1;
                     }
                 }
             }
             if is_key_pressed(KeyCode::D) {
                 if let Some(mut player) = actors.get_mut(&0) {
-                    player.pos.0 += 1;
+                    player.pos.x += 1;
                 }
             }
             if is_key_pressed(KeyCode::S) {
                 if let Some(mut player) = actors.get_mut(&0) {
-                    player.pos.1 += 1;
+                    player.pos.y += 1;
                 }
             }
 
@@ -274,7 +276,7 @@ async fn main() {
         for y in 0..tiles_y {
             let mut px = 0.0;
             for x in 0..tiles_x {
-                let tile_xy = (x as i16 + off_x, y as i16 + off_y);
+                let tile_xy = Point::from((x as i32 + off_x, y as i32 + off_y));
                 
                 // draw tile
                 if let Some(tile) = layer.get(&tile_xy) {
