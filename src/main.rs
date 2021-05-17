@@ -12,7 +12,7 @@ mod point;
 use effect::{TextEffect, ScaleText};
 use tileset::{Tileset, Pattern};
 use tile::{TileKind, Tile, TileFeature};
-use actor::{Actor, ActorKind};
+use actor::{Actor, ActorKind, ActorId};
 use point::Point;
 use layer::Layer;
 
@@ -139,7 +139,9 @@ async fn main() {
         kind: ActorKind::Player,
         pos: (2, 3).into(),
     };
-    let mut actors: HashMap<usize, Actor> = hashmap! { 0 => player };
+    let mut actors: HashMap<ActorId, Actor> = hashmap! {
+        ActorId(0) => player
+    };
         
     // item map (just an example)
     let item_places: HashMap<Point, Vec<_>> = hashmap! {
@@ -207,24 +209,25 @@ async fn main() {
                     }
                 }
             }
+            let player_id = ActorId(0);
             
             if is_key_pressed(KeyCode::A) {
-                if let Some(mut player) = actors.get_mut(&0) {
+                if let Some(mut player) = actors.get_mut(&player_id) {
                     move_if_not_blocked(&mut player, (-1, 0), &layer);
                 }
             }
             if is_key_pressed(KeyCode::W) {
-                if let Some(mut player) = actors.get_mut(&0) {
+                if let Some(mut player) = actors.get_mut(&player_id) {
                     move_if_not_blocked(&mut player, (0, -1), &layer);
                 }
             }
             if is_key_pressed(KeyCode::D) {
-                if let Some(mut player) = actors.get_mut(&0) {
+                if let Some(mut player) = actors.get_mut(&player_id) {
                     move_if_not_blocked(&mut player, (1, 0), &layer);
                 }
             }
             if is_key_pressed(KeyCode::S) {
-                if let Some(mut player) = actors.get_mut(&0) {
+                if let Some(mut player) = actors.get_mut(&player_id) {
                     move_if_not_blocked(&mut player, (0, 1), &layer);
                 }
             }

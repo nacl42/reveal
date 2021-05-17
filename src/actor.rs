@@ -14,3 +14,7 @@ pub enum ActorKind {
     Townsfolk,
 }
 
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+pub struct ActorId(pub usize);
+
+
