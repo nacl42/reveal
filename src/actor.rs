@@ -3,7 +3,7 @@
 #[derive(Debug, Clone)]
 pub struct Actor {
     pub kind: ActorKind,
-    pub pos: (usize, usize),
+    pub pos: (i16, i16),
 }
 
 #[derive(Debug, Clone)]

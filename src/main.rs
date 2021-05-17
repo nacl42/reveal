@@ -327,7 +327,7 @@ async fn main() {
 
                     // draw actors
                     for actor in actors.iter()
-                        .filter(|(_, actor)| actor.pos == (x, y)) {
+                        .filter(|(_, actor)| actor.pos == tile_xy) {
                             let index = 2; // TODO: get index from actor
                             if let Some(&source) = tileset_actors.sources.get(index) {
                                 draw_texture_ex(
