@@ -1,19 +1,22 @@
 use macroquad::prelude::*;
-//use macroquad::{input, window};
-
-mod effect;
-use effect::{TextEffect, ScaleText};
-
-mod tileset;
-use tileset::{Tileset, Pattern};
-
-mod layer;
-
 use std::collections::HashMap;
 use maplit::hashmap;
 
+mod actor;
+mod effect;
+mod tileset;
+mod layer;
 mod tile;
+
+use effect::{TextEffect, ScaleText};
+use tileset::{Tileset, Pattern};
 use tile::{TileKind, Tile, TileFeature};
+use actor::{Actor, ActorKind};
+
+const CRT_FRAGMENT_SHADER: &'static str = include_str!("shaders/vignette_fragment.glsl");
+const CRT_VERTEX_SHADER: &'static str = include_str!("shaders/vignette_vertex.glsl");
+const BW_FRAGMENT_SHADER: &'static str = include_str!("shaders/bw_fragment.glsl");
+
 
 fn window_conf() -> Conf {
     Conf {
@@ -23,16 +26,6 @@ fn window_conf() -> Conf {
         ..Default::default()
     }
 }
-
-
-const CRT_FRAGMENT_SHADER: &'static str =
-    include_str!("shaders/vignette_fragment.glsl");
-
-const CRT_VERTEX_SHADER: &'static str =
-    include_str!("shaders/vignette_vertex.glsl");
-
-const BW_FRAGMENT_SHADER: &'static str =
-    include_str!("shaders/bw_fragment.glsl");
 
 
 fn tile_class_index(tile: &Tile) -> usize {
@@ -69,8 +62,9 @@ fn tile_feature_index(tile: &Tile) -> Option<usize> {
 async fn main() {
     println!("You are in a cave and there is no light.");
 
-    println!("Press <q> to quit and <s> to scale text!");
+    println!("Press <q> to quit and <t> to scale text!");
     println!("Try <b> to switch color vision.");
+    println!("Move player with <A>, <S>, <D>, <W>.");
     println!("...and of course <up>, <down>, <left>, <right> to move the map!");
     
     // load assets
@@ -98,7 +92,7 @@ async fn main() {
 
     // the map render target will be initialised in the main loop
     let mut target: Option<RenderTarget> = None;
-        
+    
     // sample text effect (proof of concept)
     let mut effects: Vec<Box<dyn TextEffect>> = vec!();
 
@@ -129,6 +123,21 @@ async fn main() {
     };
     let tileset_items = Tileset::new("assets/items32.png", pattern).await.unwrap();
 
+    // actor tileset
+    let pattern = Pattern::Matrix {
+        width, height,
+        columns: 10,
+        rows: 1
+    };
+    let tileset_actors = Tileset::new("assets/actors32.png", pattern).await.unwrap();
+
+    // actor map (just an example)
+    let player = Actor {
+        kind: ActorKind::Player,
+        pos: (2, 3),
+    };
+    let mut actors: HashMap<usize, Actor> = hashmap! { 0 => player };
+        
     // item map (just an example)
     let item_places: HashMap<_, Vec<_>> = hashmap! {
         (5, 8) => vec![5, 6],
@@ -143,7 +152,7 @@ async fn main() {
     // main loop
     let mut last_update = get_time();
     const DELTA: f64 = 0.01;
-    let (x, mut y) = (10.0, 42.0);
+    let (title_x, title_y) = (10.0, 42.0);
     
     loop {
         // update, if necessary
@@ -151,31 +160,68 @@ async fn main() {
             last_update = get_time();
             //y += 1.0;
 
+            // Q => quit
             if is_key_down(KeyCode::Q) {
                 println!("GOODBYE");
                 break;
             }
 
+            // B => switch black/white and color mode
             if is_key_pressed(KeyCode::B) {
                 println!("switching color vision");
                 is_bw = !is_bw;
             }
 
+            // arrows keys => scroll map
             if is_key_down(KeyCode::Up) {
                 if off_y > 0 {
                     off_y -= 1;
                 }
-            } else if is_key_down(KeyCode::Left) {
+            }
+
+            if is_key_down(KeyCode::Left) {
                 if off_x > 0 {
                     off_x -= 1;
                 }
-            } else if is_key_down(KeyCode::Right) {
+            }
+
+            if is_key_down(KeyCode::Right) {
                 off_x += 1;
-            } else if is_key_down(KeyCode::Down) {
+            }
+
+            if is_key_down(KeyCode::Down) {
                 off_y += 1;
             }
 
-            if is_key_down(KeyCode::S) {
+            // ASDW => move player
+            if is_key_pressed(KeyCode::A) {
+                if let Some(mut player) = actors.get_mut(&0) {
+                    if player.pos.0 > 0 {
+                        player.pos.0 -= 1;
+                    }
+                }
+            }
+            if is_key_pressed(KeyCode::W) {
+                if let Some(mut player) = actors.get_mut(&0) {
+                    if player.pos.1 > 0 {
+                        player.pos.1 -= 1;
+                    }
+                }
+            }
+            if is_key_pressed(KeyCode::D) {
+                if let Some(mut player) = actors.get_mut(&0) {
+                    player.pos.0 += 1;
+                }
+            }
+            if is_key_pressed(KeyCode::S) {
+                if let Some(mut player) = actors.get_mut(&0) {
+                    player.pos.1 += 1;
+                }
+            }
+
+            
+            // T => show off text effect
+            if is_key_pressed(KeyCode::T) {
                 if effects.len() == 0 {
                     effects.push(Box::new(ScaleText::new()));
                 }
@@ -193,17 +239,17 @@ async fn main() {
         clear_background(BLACK);
 
         // --- map drawing --
+
         let base = vec2(10.0, 70.0);
         let sep = vec2(0.0, 0.0);
         let (tiles_x, tiles_y) = (32, 20);
         
-        // EXPERIMENTAL: render map to texture, not to screen
+        // render target for map drawing
         let map_size = vec2(
             (tiles_x as f32 * (width + sep.x)) as f32,
             (tiles_y as f32 * (height + sep.y)) as f32
         );
 
-        // render target for map drawing
         if target.is_none() {
             let _target = render_target(
                 map_size.x as u32,
@@ -235,59 +281,66 @@ async fn main() {
 
                     // draw background
                     let index = tile_class_index(&tile);
-                    match tileset.sources.get(index) {
-                        Some(&source) => {
-                            draw_texture_ex(
-                                tileset.texture, px, py, WHITE,
-                                DrawTextureParams {
-                                    dest_size: Some(
-                                        Vec2::new(width, height)
-                                    ),
-                                    source: Some(source),
-                                    ..Default::default()
-                                }
-                            )
-                        },
-                        _ => {}
+                    if let Some(&source) = tileset.sources.get(index) {
+                        draw_texture_ex(
+                            tileset.texture,
+                            px, py, WHITE,
+                            DrawTextureParams {
+                                dest_size: Some(Vec2::new(width, height)),
+                                source: Some(source),
+                                ..Default::default()
+                            }
+                        )
                     }
 
                     // draw feature (if present)
                     if let Some(index) = tile_feature_index(&tile) {
-                        match tileset_features.sources.get(index) {
-                            Some(&source) => {
-                                draw_texture_ex(
-                                    tileset_features.texture, px, py, WHITE,
-                                    DrawTextureParams {
-                                        dest_size: Some(
-                                            Vec2::new(width, height)
-                                        ),
-                                        source: Some(source),
-                                        ..Default::default()
-                                    }
-                                )
-                            },
-                            _ => {}
+                        if let Some(&source) = tileset_features.sources.get(index) {
+                            draw_texture_ex(
+                                tileset_features.texture,
+                                px, py, WHITE,
+                                DrawTextureParams {
+                                    dest_size: Some(Vec2::new(width, height)),
+                                    source: Some(source),
+                                    ..Default::default()
+                                }
+                            )
                         }
-                    };
+                    }
                     
                     // draw items
                     if let Some(indices) = item_places.get(&tile_xy) {
                         for index in indices {
-                            match tileset_items.sources.get(*index) {
-                                Some(&source) => {
-                                    draw_texture_ex(
-                                        tileset_items.texture, px, py, WHITE,
-                                        DrawTextureParams {
-                                            dest_size: Some(Vec2::new(width, height)),
-                                            source: Some(source),
-                                            ..Default::default()
-                                        }
-                                    )
-                                },
-                                _ => {}
+                            if let Some(&source) = tileset_items.sources.get(*index) {
+                                draw_texture_ex(
+                                    tileset_items.texture,
+                                    px, py, WHITE,
+                                    DrawTextureParams {
+                                        dest_size: Some(Vec2::new(width, height)),
+                                        source: Some(source),
+                                        ..Default::default()
+                                    }
+                                )
                             }
                         }
                     }
+
+                    // draw actors
+                    for actor in actors.iter()
+                        .filter(|(_, actor)| actor.pos == (x, y)) {
+                            let index = 2; // TODO: get index from actor
+                            if let Some(&source) = tileset_actors.sources.get(index) {
+                                draw_texture_ex(
+                                    tileset_actors.texture,
+                                    px, py, WHITE,
+                                    DrawTextureParams {
+                                        dest_size: Some(Vec2::new(width, height)),
+                                        source: Some(source),
+                                        ..Default::default()
+                                    }
+                                )
+                            }
+                        }
                 }                
                 px += width + sep.x;
             }
@@ -297,7 +350,7 @@ async fn main() {
         // draw texture on screen
         set_default_camera();
 
-        
+        // select material (this is just a toy function for testing)
         match is_bw {
             false => gl_use_material(material_vignette),
             true => gl_use_material(material_bw)
@@ -317,16 +370,16 @@ async fn main() {
 
         gl_use_default_material();
 
-        // draw text
+        // draw text with shadow
         let mut params2 = params.clone();
         params2.color = LIGHTGRAY;
 
         draw_text_ex(
-            "Reveal - Mystic Land of Magic and Adventure", x+1.0, y+1.0, params2
+            "Reveal - Mystic Land of Magic and Adventure", title_x+1.0, title_y+1.0, params2
         );
 
         draw_text_ex(
-            "Reveal - Mystic Land of Magic and Adventure", x, y, params
+            "Reveal - Mystic Land of Magic and Adventure", title_x, title_y, params
         );
 
         next_frame().await
