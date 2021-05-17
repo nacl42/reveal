@@ -14,6 +14,7 @@ use tileset::{Tileset, Pattern};
 use tile::{TileKind, Tile, TileFeature};
 use actor::{Actor, ActorKind};
 use point::Point;
+use layer::Layer;
 
 const CRT_FRAGMENT_SHADER: &'static str = include_str!("shaders/vignette_fragment.glsl");
 const CRT_VERTEX_SHADER: &'static str = include_str!("shaders/vignette_vertex.glsl");
@@ -196,28 +197,35 @@ async fn main() {
             }
 
             // ASDW => move player
+            fn move_if_not_blocked<P>(player: &mut Actor, offset: P, layer: &Layer<Tile>)
+            where P: Into<Point>
+            {
+                let new_pos = player.pos + offset.into();
+                if let Some(tile) = layer.get(&new_pos) {
+                    if !tile.is_blocking() {
+                        player.pos = new_pos;
+                    }
+                }
+            }
+            
             if is_key_pressed(KeyCode::A) {
                 if let Some(mut player) = actors.get_mut(&0) {
-                    if player.pos.x > 0 {
-                        player.pos.x -= 1;
-                    }
+                    move_if_not_blocked(&mut player, (-1, 0), &layer);
                 }
             }
             if is_key_pressed(KeyCode::W) {
                 if let Some(mut player) = actors.get_mut(&0) {
-                    if player.pos.y > 0 {
-                        player.pos.y -= 1;
-                    }
+                    move_if_not_blocked(&mut player, (0, -1), &layer);
                 }
             }
             if is_key_pressed(KeyCode::D) {
                 if let Some(mut player) = actors.get_mut(&0) {
-                    player.pos.x += 1;
+                    move_if_not_blocked(&mut player, (1, 0), &layer);
                 }
             }
             if is_key_pressed(KeyCode::S) {
                 if let Some(mut player) = actors.get_mut(&0) {
-                    player.pos.y += 1;
+                    move_if_not_blocked(&mut player, (0, 1), &layer);
                 }
             }
 

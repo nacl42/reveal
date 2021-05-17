@@ -20,6 +20,15 @@ impl Tile {
             _ => None
         };
     }
+
+    pub fn is_blocking(&self) -> bool {
+        match self.kind {
+            TileKind::Hedge | TileKind::Wall |
+            TileKind::Water | TileKind::ShallowWater |
+            TileKind::Window => true,
+            _ => false
+        }
+    }
 }
 
 impl From<TileKind> for Tile {
