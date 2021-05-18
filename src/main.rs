@@ -8,13 +8,17 @@ mod tileset;
 mod layer;
 mod tile;
 mod point;
+mod item;
+mod world;
 
 use effect::{TextEffect, ScaleText};
 use tileset::{Tileset, Pattern};
 use tile::{TileKind, Tile, TileFeature};
-use actor::{Actor, ActorKind, ActorId};
+use actor::{Actor, ActorKind, ActorId, ActorMap};
 use point::Point;
 use layer::Layer;
+use item::{ItemId, Item, ItemKind, ItemMap};
+use world::World;
 
 const CRT_FRAGMENT_SHADER: &'static str = include_str!("shaders/vignette_fragment.glsl");
 const CRT_VERTEX_SHADER: &'static str = include_str!("shaders/vignette_vertex.glsl");
@@ -139,11 +143,16 @@ async fn main() {
         kind: ActorKind::Player,
         pos: (2, 3).into(),
     };
-    let mut actors: HashMap<ActorId, Actor> = hashmap! {
+    let mut actors: ActorMap = hashmap! {
         ActorId(0) => player
     };
-        
+    
     // item map (just an example)
+    let items: ItemMap = hashmap! {
+        ItemId(0) => Item { kind: ItemKind::Money(10), pos: Some((10, 10).into()) },
+        ItemId(1) => Item { kind: ItemKind::Wand, pos: Some((12, 10).into()) }
+    };
+    
     let item_places: HashMap<Point, Vec<_>> = hashmap! {
         (5, 8).into() => vec![5, 6],
         (6, 8).into() => vec![5],
@@ -153,7 +162,14 @@ async fn main() {
     
     let layer = layer::read_tile_layer_from_file("assets/sample.layer").unwrap();
     let (mut off_x, mut off_y) = (0, 0);
-    
+
+    // the World contains the actual game data
+    // all of the above will be moved into the World, one by one
+    let mut world = World::new();
+    let player = Actor::new(ActorKind::Player, (0, 2));
+    //world.actors.insert(player);
+    // actor map (just an example)
+
     // main loop
     let mut last_update = get_time();
     const DELTA: f64 = 0.01;
