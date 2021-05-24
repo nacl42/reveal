@@ -18,7 +18,7 @@ const SEQUENCE_BITS: i8 = 12;
 const TIMESTAMP_LEFT_SHIFT: i8 = NODE_ID_LEFT_SHIFT + SEQUENCE_BITS;
 const SEQUENCE_MASK: u64 = !0 ^ (!0 << SEQUENCE_BITS);
 const ONE_MILLISEC: Duration = Duration::from_millis(1);
-const NEXT_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+static NEXT_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// Returns an unsigned 64-bit integer between 0 and 4095, i.e. a 12
 /// bit value. The number is increased with each call, if it exceeds

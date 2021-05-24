@@ -1,4 +1,6 @@
 use crate::point::Point;
+use crate::item::ItemId;
+
 use std::collections::HashMap;
 use crate::id::Id;
 
@@ -6,6 +8,7 @@ use crate::id::Id;
 pub struct Actor {
     pub kind: ActorKind,
     pub pos: Point,
+    pub inventory: Vec<ItemId>
 }
 
 impl Actor {
@@ -14,7 +17,8 @@ impl Actor {
     {
         Self {
             kind,
-            pos: pos.into()
+            pos: pos.into(),
+            inventory: Vec::new()
         }
     }
 }

@@ -80,6 +80,7 @@ async fn main() {
     println!("Press <q> to quit and <t> to scale text!");
     println!("Try <b> to switch color vision.");
     println!("Move player with <A>, <S>, <D>, <W>.");
+    println!("List inventory with <I>.");
     println!("...and of course <up>, <down>, <left>, <right> to move the map!");
     
     // load assets
@@ -91,7 +92,7 @@ async fn main() {
         ..Default::default()
     };
 
-    let mut params_info = TextParams {
+    let params_info = TextParams {
         font,
         font_size: 16,
         color: WHITE,
@@ -160,6 +161,18 @@ async fn main() {
             if is_key_down(KeyCode::Q) {
                 println!("GOODBYE");
                 break;
+            }
+
+            // I => inventory
+            if is_key_pressed(KeyCode::I) {
+                println!("Inventory:");
+                if let Some(player) = world.actors.get(&world.player_id()) {
+                    for (n, item_id) in player.inventory.iter().enumerate() {
+                        if let Some(item) = world.items.get(item_id) {
+                            println!("{} - {}", n, item.description());
+                        }
+                    }
+                }
             }
 
             // B => switch black/white and color mode
@@ -397,7 +410,6 @@ async fn main() {
         if let Some(player) = world.actors.get(&world.player_id()) {
             let text_xy = format!("{}, {}", player.pos.x, player.pos.y);
             let pos = base + Vec2::from((0.0, map_size.y + 24.0 + 10.0));
-            dbg!(pos);
             draw_text_ex(&text_xy, pos.x, pos.y, params_info);
         }
         

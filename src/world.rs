@@ -3,6 +3,7 @@ use crate::point::Point;
 use crate::item::{Item, ItemKind, ItemMap, ItemId};
 use crate::actor::{Actor, ActorKind, ActorMap, ActorId};
 use crate::terrain::{TerrainMap, read_terrain_from_file};
+use crate::flake;
 
 //use crate::idmap::{IdMap};
 //use crate::tile::TileMap;
@@ -30,15 +31,26 @@ impl World {
         }
     }
 
-    pub fn populate_world(&mut self) {
-        let player = Actor::new(ActorKind::Player, (2, 3));
-        self.actors.insert(self.player_id, player);
-
+    pub fn populate_world(&mut self) {        
         // item map (just an example)
-        let item1 = Item { kind: ItemKind::Money(10), pos: Some((5, 6).into()) };
-        let item2 = Item { kind: ItemKind::Wand, pos: Some((12, 10).into()) };
+        let item1 = Item::new(ItemKind::Money(10)).with_pos((5, 6));
+        let item2 = Item::new(ItemKind::Wand).with_pos((12, 10));
         self.items.insert(ItemId::new(), item1);
         self.items.insert(ItemId::new(), item2);
+
+        let item3 = Item::new(ItemKind::Wand).with_owner(self.player_id);
+        let id3 = ItemId::new();
+        self.items.insert(id3, item3);
+
+        let item4 = Item::new(ItemKind::Money(42)).with_owner(self.player_id);
+        let id4 = ItemId::new();
+        self.items.insert(id4, item4);
+
+        let mut player = Actor::new(ActorKind::Player, (2, 3));
+        player.inventory.push(id3);
+        player.inventory.push(id4);
+        
+        self.actors.insert(self.player_id, player);
     }
 
     
