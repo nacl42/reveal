@@ -26,8 +26,8 @@ pub enum ActorKind {
     Townsfolk,
 }
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
-pub struct ActorId(pub usize);
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
+pub struct ActorId(pub u64);
 
 pub type ActorMap = HashMap<ActorId, Actor>;
     

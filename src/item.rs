@@ -4,7 +4,7 @@ use std::collections::HashMap;
 pub type ItemMap = HashMap<ItemId, Item>;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct ItemId(pub usize);
+pub struct ItemId(pub u64);
 
 #[derive(Debug, Clone)]
 pub struct Item {

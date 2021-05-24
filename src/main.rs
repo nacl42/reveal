@@ -10,6 +10,7 @@ mod tile;
 mod point;
 mod item;
 mod world;
+mod idmap;
 
 use effect::{TextEffect, ScaleText};
 use tileset::{Tileset, Pattern};
@@ -138,27 +139,6 @@ async fn main() {
     };
     let tileset_actors = Tileset::new("assets/actors32.png", pattern).await.unwrap();
 
-    // actor map (just an example)
-    let player = Actor {
-        kind: ActorKind::Player,
-        pos: (2, 3).into(),
-    };
-    let mut actors: ActorMap = hashmap! {
-        ActorId(0) => player
-    };
-    
-    // item map (just an example)
-    let items: ItemMap = hashmap! {
-        ItemId(0) => Item { kind: ItemKind::Money(10), pos: Some((10, 10).into()) },
-        ItemId(1) => Item { kind: ItemKind::Wand, pos: Some((12, 10).into()) }
-    };
-    
-    let item_places: HashMap<Point, Vec<_>> = hashmap! {
-        (5, 8).into() => vec![5, 6],
-        (6, 8).into() => vec![5],
-        (7, 9).into() => vec![2],
-        (20, 10).into() => vec![3]
-    };
     
     let layer = layer::read_tile_layer_from_file("assets/sample.layer").unwrap();
     let (mut off_x, mut off_y) = (0, 0);
@@ -166,9 +146,7 @@ async fn main() {
     // the World contains the actual game data
     // all of the above will be moved into the World, one by one
     let mut world = World::new();
-    let player = Actor::new(ActorKind::Player, (0, 2));
-    //world.actors.insert(player);
-    // actor map (just an example)
+    world.populate_world();
 
     // main loop
     let mut last_update = get_time();
@@ -225,8 +203,9 @@ async fn main() {
                     }
                 }
             }
-            let player_id = ActorId(0);
-            
+            let player_id = world.player_id();
+            let actors = &mut world.actors;
+  
             if is_key_pressed(KeyCode::A) {
                 if let Some(mut player) = actors.get_mut(&player_id) {
                     move_if_not_blocked(&mut player, (-1, 0), &layer);
@@ -338,24 +317,36 @@ async fn main() {
                     }
                     
                     // draw items
-                    if let Some(indices) = item_places.get(&tile_xy) {
-                        for index in indices {
-                            if let Some(&source) = tileset_items.sources.get(*index) {
-                                draw_texture_ex(
-                                    tileset_items.texture,
-                                    px, py, WHITE,
-                                    DrawTextureParams {
-                                        dest_size: Some(Vec2::new(width, height)),
-                                        source: Some(source),
-                                        ..Default::default()
-                                    }
-                                )
-                            }
+                    let items = world.items_at(&tile_xy);
+                    for index in items {
+
+                        // TODO: move into render function
+                        let mut tileset_index = 0;
+
+                        if let Some(item) = world.items.get(index) {
+                            tileset_index =  match item.kind {
+                                ItemKind::Money(_) => 1,
+                                ItemKind::Wand => 2
+                            };
+                        };
+
+                        if let Some(&source) =
+                            tileset_items.sources.get(tileset_index)
+                        {
+                            draw_texture_ex(
+                                tileset_items.texture,
+                                px, py, WHITE,
+                                DrawTextureParams {
+                                    dest_size: Some(Vec2::new(width, height)),
+                                    source: Some(source),
+                                    ..Default::default()
+                                }
+                            )
                         }
                     }
 
                     // draw actors
-                    for actor in actors.iter()
+                    for actor in world.actors.iter()
                         .filter(|(_, actor)| actor.pos == tile_xy) {
                             let index = 2; // TODO: get index from actor
                             if let Some(&source) = tileset_actors.sources.get(index) {
