@@ -18,6 +18,7 @@ use actor::{Actor}; //, ActorKind, ActorId, ActorMap};
 use point::Point;
 use item::{ItemKind}; //ItemId, Item, ItemKind, ItemMap};
 use world::World;
+use item::Item;
 
 const CRT_FRAGMENT_SHADER: &'static str = include_str!("shaders/vignette_fragment.glsl");
 const CRT_VERTEX_SHADER: &'static str = include_str!("shaders/vignette_vertex.glsl");
@@ -34,7 +35,7 @@ fn window_conf() -> Conf {
 }
 
 
-fn tile_class_index(tile: &Terrain) -> usize {
+fn terrain_class_index(tile: &Terrain) -> usize {
     match tile.kind {
         TerrainKind::Grass => 0,
         TerrainKind::Hedge => 5,
@@ -50,7 +51,7 @@ fn tile_class_index(tile: &Terrain) -> usize {
     }
 }
 
-fn tile_feature_index(tile: &Terrain) -> Option<usize> {
+fn terrain_feature_index(tile: &Terrain) -> Option<usize> {
     if let Some(feature) = &tile.feature {
         let index = match feature {
             TerrainFeature::Mushroom => 20,
@@ -63,6 +64,14 @@ fn tile_feature_index(tile: &Terrain) -> Option<usize> {
         None
     }
 }
+
+fn item_index(item: &Item) -> usize {
+    match item.kind {
+        ItemKind::Money(_) => 1,
+        ItemKind::Wand => 2
+    }
+}
+
 
 #[macroquad::main(window_conf)]
 async fn main() {
@@ -268,7 +277,7 @@ async fn main() {
                 if let Some(tile) = world.terrain.get(&tile_xy) {
 
                     // draw background
-                    let index = tile_class_index(&tile);
+                    let index = terrain_class_index(&tile);
                     if let Some(&source) = tileset.sources.get(index) {
                         draw_texture_ex(
                             tileset.texture,
@@ -282,7 +291,7 @@ async fn main() {
                     }
 
                     // draw feature (if present)
-                    if let Some(index) = tile_feature_index(&tile) {
+                    if let Some(index) = terrain_feature_index(&tile) {
                         if let Some(&source) = tileset_features.sources.get(index) {
                             draw_texture_ex(
                                 tileset_features.texture,
@@ -298,16 +307,10 @@ async fn main() {
                     
                     // draw items
                     let items = world.items_at(&tile_xy);
-                    for index in items {
-
-                        // TODO: move into render function
+                    for index in items {                        
                         let mut tileset_index = 0;
-
                         if let Some(item) = world.items.get(index) {
-                            tileset_index =  match item.kind {
-                                ItemKind::Money(_) => 1,
-                                ItemKind::Wand => 2
-                            };
+                            tileset_index = item_index(&item);
                         };
 
                         if let Some(&source) =
