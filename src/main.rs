@@ -3,7 +3,6 @@ use macroquad::prelude::*;
 mod actor;
 mod effect;
 mod tileset;
-mod layer;
 mod terrain;
 mod point;
 mod item;
@@ -14,10 +13,9 @@ mod idmap;
 
 use effect::{TextEffect, ScaleText};
 use tileset::{Tileset, Pattern};
-use terrain::{TerrainKind, Terrain, TerrainFeature};
+use terrain::{TerrainKind, Terrain, TerrainFeature, TerrainMap};
 use actor::{Actor}; //, ActorKind, ActorId, ActorMap};
 use point::Point;
-use layer::Layer;
 use item::{ItemKind}; //ItemId, Item, ItemKind, ItemMap};
 use world::World;
 
@@ -104,43 +102,25 @@ async fn main() {
     // sample text effect (proof of concept)
     let mut effects: Vec<Box<dyn TextEffect>> = vec!();
 
-    // pattern, tileset, layer
+    // pattern, tileset
     let (width, height) = (32.0, 32.0);
-    let pattern = Pattern::Matrix {
-        width, height,
-        columns: 10,
-        rows: 2, 
-    };
+    let pattern = Pattern::Matrix { width, height, columns: 10, rows: 2 };
     let tileset = Tileset::new("assets/tileset32.png", pattern).await.unwrap();
 
     // feature tileset
-    let pattern = Pattern::Matrix {
-        width, height,
-        columns: 10,
-        rows: 9, 
-    };
+    let pattern = Pattern::Matrix { width, height, columns: 10, rows: 9 };
     let tileset_features = Tileset::new(
         "assets/features32.png", pattern
     ).await.unwrap();
 
     // item tileset
-    let pattern = Pattern::Matrix {
-        width, height,
-        columns: 10,
-        rows: 3,
-    };
+    let pattern = Pattern::Matrix { width, height, columns: 10, rows: 3 };
     let tileset_items = Tileset::new("assets/items32.png", pattern).await.unwrap();
 
     // actor tileset
-    let pattern = Pattern::Matrix {
-        width, height,
-        columns: 10,
-        rows: 1
-    };
+    let pattern = Pattern::Matrix { width, height, columns: 10, rows: 1 };
     let tileset_actors = Tileset::new("assets/actors32.png", pattern).await.unwrap();
 
-    
-    let layer = layer::read_terrain_layer_from_file("assets/sample.layer").unwrap();
     let (mut off_x, mut off_y) = (0, 0);
 
     // the World contains the actual game data
@@ -193,12 +173,12 @@ async fn main() {
             }
 
             // ASDW => move player
-            fn move_if_not_blocked<P>(player: &mut Actor, offset: P, layer: &Layer<Terrain>)
+            fn move_if_not_blocked<P>(player: &mut Actor, offset: P, terrain: &TerrainMap)
             where P: Into<Point>
             {
                 let new_pos = player.pos + offset.into();
-                if let Some(tile) = layer.get(&new_pos) {
-                    if !tile.is_blocking() {
+                if let Some(terrain) = terrain.get(&new_pos) {
+                    if !terrain.is_blocking() {
                         player.pos = new_pos;
                     }
                 }
@@ -208,22 +188,22 @@ async fn main() {
   
             if is_key_pressed(KeyCode::A) {
                 if let Some(mut player) = actors.get_mut(&player_id) {
-                    move_if_not_blocked(&mut player, (-1, 0), &layer);
+                    move_if_not_blocked(&mut player, (-1, 0), &world.terrain);
                 }
             }
             if is_key_pressed(KeyCode::W) {
                 if let Some(mut player) = actors.get_mut(&player_id) {
-                    move_if_not_blocked(&mut player, (0, -1), &layer);
+                    move_if_not_blocked(&mut player, (0, -1), &world.terrain);
                 }
             }
             if is_key_pressed(KeyCode::D) {
                 if let Some(mut player) = actors.get_mut(&player_id) {
-                    move_if_not_blocked(&mut player, (1, 0), &layer);
+                    move_if_not_blocked(&mut player, (1, 0), &world.terrain);
                 }
             }
             if is_key_pressed(KeyCode::S) {
                 if let Some(mut player) = actors.get_mut(&player_id) {
-                    move_if_not_blocked(&mut player, (0, 1), &layer);
+                    move_if_not_blocked(&mut player, (0, 1), &world.terrain);
                 }
             }
 
@@ -285,7 +265,7 @@ async fn main() {
                 let tile_xy = Point::from((x as i32 + off_x, y as i32 + off_y));
                 
                 // draw tile
-                if let Some(tile) = layer.get(&tile_xy) {
+                if let Some(tile) = world.terrain.get(&tile_xy) {
 
                     // draw background
                     let index = tile_class_index(&tile);

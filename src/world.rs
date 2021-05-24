@@ -2,6 +2,7 @@
 use crate::point::Point;
 use crate::item::{Item, ItemKind, ItemMap, ItemId};
 use crate::actor::{Actor, ActorKind, ActorMap, ActorId};
+use crate::terrain::{TerrainMap, read_terrain_from_file};
 
 //use crate::idmap::{IdMap};
 //use crate::tile::TileMap;
@@ -10,6 +11,7 @@ use crate::actor::{Actor, ActorKind, ActorMap, ActorId};
 pub struct World {
     pub actors: ActorMap,
     pub items: ItemMap,
+    pub terrain: TerrainMap,
     player_id: ActorId,
     //pub tiles: TileMap
 }
@@ -22,6 +24,7 @@ impl World {
         Self {
             actors: ActorMap::new(),
             items: ItemMap::new(),
+            terrain: read_terrain_from_file("assets/sample.layer").unwrap(),
             player_id,
             //tiles: TileMap::new(),
         }
