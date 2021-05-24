@@ -114,7 +114,7 @@ async fn main() {
     // pattern, tileset
     let (width, height) = (32.0, 32.0);
     let pattern = Pattern::Matrix { width, height, columns: 10, rows: 2 };
-    let tileset = Tileset::new("assets/tileset32.png", pattern).await.unwrap();
+    let tileset_terrain = Tileset::new("assets/tileset32.png", pattern).await.unwrap();
 
     // feature tileset
     let pattern = Pattern::Matrix { width, height, columns: 10, rows: 9 };
@@ -278,9 +278,9 @@ async fn main() {
 
                     // draw background
                     let index = terrain_class_index(&tile);
-                    if let Some(&source) = tileset.sources.get(index) {
+                    if let Some(&source) = tileset_terrain.sources.get(index) {
                         draw_texture_ex(
-                            tileset.texture,
+                            tileset_terrain.texture,
                             px, py, WHITE,
                             DrawTextureParams {
                                 dest_size: Some(Vec2::new(width, height)),
