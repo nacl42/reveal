@@ -1,13 +1,13 @@
 use rand::Rng;
 
 #[derive(Debug, Clone)]
-pub struct Tile {
-    pub kind: TileKind,
-    pub feature: Option<TileFeature>,
+pub struct Terrain {
+    pub kind: TerrainKind,
+    pub feature: Option<TerrainFeature>,
 }
 
-impl Tile {
-    pub fn with(mut self, feature: TileFeature) -> Tile {
+impl Terrain {
+    pub fn with(mut self, feature: TerrainFeature) -> Terrain {
         self.feature = Some(feature);
         self
     }
@@ -15,34 +15,34 @@ impl Tile {
     pub fn set_random_decor(&mut self) {
         let mut rng = rand::thread_rng();
         self.feature = match self.kind {
-            TileKind::Grass => Some(TileFeature::Flower(rng.gen_range(0..7))),
-            TileKind::ShallowWater => Some(TileFeature::Waterlily),
+            TerrainKind::Grass => Some(TerrainFeature::Flower(rng.gen_range(0..7))),
+            TerrainKind::ShallowWater => Some(TerrainFeature::Waterlily),
             _ => None
         };
     }
 
     pub fn is_blocking(&self) -> bool {
         match self.kind {
-            TileKind::Hedge | TileKind::Wall |
-            TileKind::Water | TileKind::ShallowWater |
-            TileKind::Window => true,
+            TerrainKind::Hedge | TerrainKind::Wall |
+            TerrainKind::Water | TerrainKind::ShallowWater |
+            TerrainKind::Window => true,
             _ => false
         }
     }
 }
 
-impl From<TileKind> for Tile {
-    fn from(kind: TileKind) -> Tile {
-        Tile {
+impl From<TerrainKind> for Terrain {
+    fn from(kind: TerrainKind) -> Terrain {
+        Terrain {
             kind,
             feature: None
         }
     }
 }
 
-impl From<&TileKind> for Tile {
-    fn from(kind: &TileKind) -> Tile {
-        Tile {
+impl From<&TerrainKind> for Terrain {
+    fn from(kind: &TerrainKind) -> Terrain {
+        Terrain {
             kind: kind.clone(),
             feature: None
         }
@@ -51,7 +51,7 @@ impl From<&TileKind> for Tile {
 
 
 #[derive(Debug, Clone)]
-pub enum TileKind {
+pub enum TerrainKind {
     Empty,
     Grass,
     ThickGrass,
@@ -69,7 +69,7 @@ pub enum TileKind {
 pub enum DoorState { Open, Closed, Locked }
 
 #[derive(Debug, Clone)]
-pub enum TileFeature {
+pub enum TerrainFeature {
     Mushroom,
     Flower(u8),
     Waterlily,

@@ -6,7 +6,7 @@ mod actor;
 mod effect;
 mod tileset;
 mod layer;
-mod tile;
+mod terrain;
 mod point;
 mod item;
 mod world;
@@ -14,7 +14,7 @@ mod idmap;
 
 use effect::{TextEffect, ScaleText};
 use tileset::{Tileset, Pattern};
-use tile::{TileKind, Tile, TileFeature};
+use terrain::{TerrainKind, Terrain, TerrainFeature};
 use actor::{Actor, ActorKind, ActorId, ActorMap};
 use point::Point;
 use layer::Layer;
@@ -36,29 +36,29 @@ fn window_conf() -> Conf {
 }
 
 
-fn tile_class_index(tile: &Tile) -> usize {
+fn tile_class_index(tile: &Terrain) -> usize {
     match tile.kind {
-        TileKind::Grass => 0,
-        TileKind::Hedge => 5,
-        TileKind::StoneFloor => 11,
-        TileKind::Path => 1,
-        TileKind::ThickGrass => 10,
-        TileKind::Water => 2,
-        TileKind::Wall => 3,
-        TileKind::ShallowWater => 12,
-        TileKind::Door(_) => 14,
-        TileKind::Window => 15,
+        TerrainKind::Grass => 0,
+        TerrainKind::Hedge => 5,
+        TerrainKind::StoneFloor => 11,
+        TerrainKind::Path => 1,
+        TerrainKind::ThickGrass => 10,
+        TerrainKind::Water => 2,
+        TerrainKind::Wall => 3,
+        TerrainKind::ShallowWater => 12,
+        TerrainKind::Door(_) => 14,
+        TerrainKind::Window => 15,
         _ => 0
     }
 }
 
-fn tile_feature_index(tile: &Tile) -> Option<usize> {
+fn tile_feature_index(tile: &Terrain) -> Option<usize> {
     if let Some(feature) = &tile.feature {
         let index = match feature {
-            TileFeature::Mushroom => 20,
-            TileFeature::Flower(n) => (40 + (n % 4) as usize),
-            TileFeature::Stones => 10,
-            TileFeature::Waterlily => 30
+            TerrainFeature::Mushroom => 20,
+            TerrainFeature::Flower(n) => (40 + (n % 4) as usize),
+            TerrainFeature::Stones => 10,
+            TerrainFeature::Waterlily => 30
         };
         Some(index)
     } else {
@@ -140,7 +140,7 @@ async fn main() {
     let tileset_actors = Tileset::new("assets/actors32.png", pattern).await.unwrap();
 
     
-    let layer = layer::read_tile_layer_from_file("assets/sample.layer").unwrap();
+    let layer = layer::read_terrain_layer_from_file("assets/sample.layer").unwrap();
     let (mut off_x, mut off_y) = (0, 0);
 
     // the World contains the actual game data
@@ -193,7 +193,7 @@ async fn main() {
             }
 
             // ASDW => move player
-            fn move_if_not_blocked<P>(player: &mut Actor, offset: P, layer: &Layer<Tile>)
+            fn move_if_not_blocked<P>(player: &mut Actor, offset: P, layer: &Layer<Terrain>)
             where P: Into<Point>
             {
                 let new_pos = player.pos + offset.into();
