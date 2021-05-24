@@ -10,6 +10,7 @@ mod terrain;
 mod point;
 mod item;
 mod world;
+mod id;
 mod idmap;
 
 use effect::{TextEffect, ScaleText};

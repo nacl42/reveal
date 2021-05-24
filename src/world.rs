@@ -2,7 +2,8 @@
 use crate::point::Point;
 use crate::item::{Item, ItemKind, ItemMap, ItemId};
 use crate::actor::{Actor, ActorKind, ActorMap, ActorId};
-use crate::idmap::{IdMap, Id};
+use crate::idmap::{IdMap};
+use crate::id::Id;
 
 use cornflake::CornFlake;
 use maplit::hashmap;
