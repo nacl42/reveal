@@ -2,21 +2,14 @@
 use crate::point::Point;
 use crate::item::{Item, ItemKind, ItemMap, ItemId};
 use crate::actor::{Actor, ActorKind, ActorMap, ActorId};
-use crate::idmap::{IdMap};
-use crate::id::Id;
 
-use cornflake::CornFlake;
-use maplit::hashmap;
-use std::collections::HashMap;
-
-
+//use crate::idmap::{IdMap};
 //use crate::tile::TileMap;
 
 #[derive(Debug)]
 pub struct World {
     pub actors: ActorMap,
     pub items: ItemMap,
-    pub cf: CornFlake,
     player_id: ActorId,
     //pub tiles: TileMap
 }
@@ -24,15 +17,12 @@ pub struct World {
 impl World {
 
     pub fn new() -> Self {
-        let c: cornflake::Config = Default::default();
-        let mut cf = CornFlake::new(&c).unwrap();
-        let player_id = ActorId(cf.next_id().unwrap());
+        let player_id = ActorId::new();
 
         Self {
             actors: ActorMap::new(),
             items: ItemMap::new(),
             player_id,
-            cf
             //tiles: TileMap::new(),
         }
     }
@@ -44,8 +34,8 @@ impl World {
         // item map (just an example)
         let item1 = Item { kind: ItemKind::Money(10), pos: Some((5, 6).into()) };
         let item2 = Item { kind: ItemKind::Wand, pos: Some((12, 10).into()) };
-        self.items.insert(ItemId(self.cf.next_id().unwrap()), item1);
-        self.items.insert(ItemId(self.cf.next_id().unwrap()), item2);
+        self.items.insert(ItemId::new(), item1);
+        self.items.insert(ItemId::new(), item2);
     }
 
     

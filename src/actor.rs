@@ -1,5 +1,6 @@
 use crate::point::Point;
 use std::collections::HashMap;
+use crate::id::Id;
 
 #[derive(Debug, Clone)]
 pub struct Actor {
@@ -18,6 +19,7 @@ impl Actor {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum ActorKind {
     Player,
@@ -26,8 +28,9 @@ pub enum ActorKind {
     Townsfolk,
 }
 
-#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
-pub struct ActorId(pub u64);
+//#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
+//pub struct ActorId(pub u64);
 
+pub type ActorId = Id<Actor>;
 pub type ActorMap = HashMap<ActorId, Actor>;
     

@@ -1,14 +1,14 @@
 
 use std::marker::PhantomData;
 use std::hash::{Hash, Hasher};
-
+use crate::flake;
 
 #[derive(Debug)]
 pub struct Id<T>(u64, PhantomData<T>);
 
 impl<T> Id<T> {
-    pub fn new(data: u64) -> Self {
-        Id::<T>(data, PhantomData)
+    pub fn new() -> Self {
+        Id::<T>(flake::new_flake().unwrap(), PhantomData)
     }
 }
 impl<T> std::cmp::PartialEq for Id<T> {

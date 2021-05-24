@@ -1,6 +1,4 @@
 use macroquad::prelude::*;
-use std::collections::HashMap;
-use maplit::hashmap;
 
 mod actor;
 mod effect;
@@ -10,16 +8,17 @@ mod terrain;
 mod point;
 mod item;
 mod world;
+mod flake;
 mod id;
 mod idmap;
 
 use effect::{TextEffect, ScaleText};
 use tileset::{Tileset, Pattern};
 use terrain::{TerrainKind, Terrain, TerrainFeature};
-use actor::{Actor, ActorKind, ActorId, ActorMap};
+use actor::{Actor}; //, ActorKind, ActorId, ActorMap};
 use point::Point;
 use layer::Layer;
-use item::{ItemId, Item, ItemKind, ItemMap};
+use item::{ItemKind}; //ItemId, Item, ItemKind, ItemMap};
 use world::World;
 
 const CRT_FRAGMENT_SHADER: &'static str = include_str!("shaders/vignette_fragment.glsl");
@@ -347,7 +346,7 @@ async fn main() {
                     }
 
                     // draw actors
-                    for actor in world.actors.iter()
+                    for _ in world.actors.iter()
                         .filter(|(_, actor)| actor.pos == tile_xy) {
                             let index = 2; // TODO: get index from actor
                             if let Some(&source) = tileset_actors.sources.get(index) {

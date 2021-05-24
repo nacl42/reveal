@@ -9,12 +9,14 @@ pub enum Pattern {
 }
 
 impl Pattern {
+    #[allow(dead_code)]
     pub fn width(&self) -> f32 {
         match self {
             Pattern::Matrix { width, .. } => width.clone()
         }
     }
 
+    #[allow(dead_code)]
     pub fn height(&self) -> f32 {
         match self {
             Pattern::Matrix { height, .. } => height.clone()

@@ -7,6 +7,7 @@ pub type Layer<T> = HashMap<Point, T>;
 
 use crate::terrain::{Terrain, TerrainKind, DoorState};
 
+#[allow(unused_assignments)]
 pub fn read_terrain_layer_from_file<P>(path: P)
                                   -> Result<Layer<Terrain>, std::io::Error>
 where P: AsRef<std::path::Path>

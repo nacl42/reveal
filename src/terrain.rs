@@ -7,6 +7,7 @@ pub struct Terrain {
 }
 
 impl Terrain {
+    #[allow(dead_code)]
     pub fn with(mut self, feature: TerrainFeature) -> Terrain {
         self.feature = Some(feature);
         self
@@ -50,6 +51,7 @@ impl From<&TerrainKind> for Terrain {
 }
 
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum TerrainKind {
     Empty,
@@ -65,9 +67,11 @@ pub enum TerrainKind {
     Door(DoorState)
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum DoorState { Open, Closed, Locked }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum TerrainFeature {
     Mushroom,
