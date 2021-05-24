@@ -91,6 +91,14 @@ async fn main() {
         ..Default::default()
     };
 
+    let mut params_info = TextParams {
+        font,
+        font_size: 16,
+        color: WHITE,
+        ..Default::default()
+    };
+
+
     let material_vignette = load_material(
         CRT_VERTEX_SHADER,
         CRT_FRAGMENT_SHADER,
@@ -274,10 +282,10 @@ async fn main() {
                 let tile_xy = Point::from((x as i32 + off_x, y as i32 + off_y));
                 
                 // draw tile
-                if let Some(tile) = world.terrain.get(&tile_xy) {
+                if let Some(terrain) = world.terrain.get(&tile_xy) {
 
                     // draw background
-                    let index = terrain_class_index(&tile);
+                    let index = terrain_class_index(&terrain);
                     if let Some(&source) = tileset_terrain.sources.get(index) {
                         draw_texture_ex(
                             tileset_terrain.texture,
@@ -291,7 +299,7 @@ async fn main() {
                     }
 
                     // draw feature (if present)
-                    if let Some(index) = terrain_feature_index(&tile) {
+                    if let Some(index) = terrain_feature_index(&terrain) {
                         if let Some(&source) = tileset_features.sources.get(index) {
                             draw_texture_ex(
                                 tileset_features.texture,
@@ -385,6 +393,14 @@ async fn main() {
             "Reveal - Mystic Land of Magic and Adventure", title_x, title_y, params
         );
 
+        // draw actor position
+        if let Some(player) = world.actors.get(&world.player_id()) {
+            let text_xy = format!("{}, {}", player.pos.x, player.pos.y);
+            let pos = base + Vec2::from((0.0, map_size.y + 24.0 + 10.0));
+            dbg!(pos);
+            draw_text_ex(&text_xy, pos.x, pos.y, params_info);
+        }
+        
         next_frame().await
     }
 }

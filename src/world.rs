@@ -45,7 +45,7 @@ impl World {
     pub fn player_id(&self) -> ActorId {
         self.player_id
     }
-    
+
     pub fn items_at(&self, pos: &Point) -> Vec<&ItemId> {
         self.items.iter()
             .filter(|(_, item)| item.pos.is_some())
