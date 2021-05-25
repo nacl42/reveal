@@ -1,13 +1,11 @@
 use crate::point::Point;
-use std::collections::HashMap;
+use crate::actor::{Actor, ActorId};
 use crate::id::Id;
-use crate::actor::ActorId;
+use crate::idmap::IdMap;
 
 pub type ItemId = Id<Item>;
-pub type ItemMap = HashMap<ItemId, Item>;
+pub type ItemMap = IdMap<Item>;
 
-// #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-// pub struct ItemId(pub u64);
 
 #[derive(Debug, Clone)]
 pub struct Item {

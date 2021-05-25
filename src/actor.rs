@@ -1,7 +1,7 @@
 use crate::point::Point;
 use crate::item::ItemId;
+use crate::idmap::IdMap;
 
-use std::collections::HashMap;
 use crate::id::Id;
 
 #[derive(Debug, Clone)]
@@ -36,5 +36,4 @@ pub enum ActorKind {
 //pub struct ActorId(pub u64);
 
 pub type ActorId = Id<Actor>;
-pub type ActorMap = HashMap<ActorId, Actor>;
-    
+pub type ActorMap = IdMap<Actor>;
