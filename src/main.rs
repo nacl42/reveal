@@ -80,7 +80,7 @@ async fn main() {
     println!("Press <q> to quit and <t> to scale text!");
     println!("Try <b> to switch color vision.");
     println!("Move player with <A>, <S>, <D>, <W>.");
-    println!("List inventory with <I>.");
+    println!("List inventory with <I>, pick up items with <P>.");
     println!("...and of course <up>, <down>, <left>, <right> to move the map!");
     
     // load assets
@@ -244,7 +244,21 @@ async fn main() {
                     effects.push(Box::new(ScaleText::new()));
                 }
             }
-            
+
+            // P => pick up items
+            if is_key_pressed(KeyCode::P) {
+                let player_id = world.player_id();
+                if let Some(player) = world.actors.get(&player_id) {
+                    for id in &world.item_ids_at(&player.pos) {
+                        let item = world.items.get_mut(&id).unwrap();
+                        println!("pickung up {}", item.description());
+                        item.owner = Some(player_id);
+                        item.pos = None;
+                        world.actors.get_mut(&player_id).unwrap()
+                            .inventory.push(*id);
+                    }                    
+                }
+            }
         }
 
         // update and apply effects
@@ -327,10 +341,10 @@ async fn main() {
                     }
                     
                     // draw items
-                    let items = world.items_at(&tile_xy);
+                    let items = world.item_ids_at(&tile_xy);
                     for index in items {                        
                         let mut tileset_index = 0;
-                        if let Some(item) = world.items.get(index) {
+                        if let Some(item) = world.items.get(&index) {
                             tileset_index = item_index(&item);
                         };
 
@@ -414,14 +428,20 @@ async fn main() {
             draw_text_ex(&text, pos.x, pos.y, params_info);
 
             // names of items at spot
-            let ids = world.items_at(&player.pos);
+            let ids = world.item_ids_at(&player.pos);
             let names = ids.iter()
                 .map(|id| world.items.get(id).unwrap())
                 .map(|item| item.description())
                 .collect::<Vec<String>>();
             let text = names.join(", ");
-            let pos = pos + Vec2::from((80.0, 0.0));
-            draw_text_ex(&text, pos.x, pos.y, params_info);
+            if text.len() > 0 {
+                let pos = pos + Vec2::from((80.0, 0.0));
+                draw_text_ex(&text, pos.x, pos.y, params_info);
+
+                let text = "use <p> to pick up the items";
+                let pos = pos + Vec2::from((0.0, 30.0));
+                draw_text_ex(&text, pos.x, pos.y, params_info);
+            }
         }
 
         next_frame().await

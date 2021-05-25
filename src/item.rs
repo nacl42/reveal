@@ -1,5 +1,5 @@
 use crate::point::Point;
-use crate::actor::{Actor, ActorId};
+use crate::actor::{ActorId};
 use crate::id::Id;
 use crate::idmap::IdMap;
 

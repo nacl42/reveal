@@ -57,11 +57,11 @@ impl World {
         self.player_id
     }
 
-    pub fn items_at(&self, pos: &Point) -> Vec<&ItemId> {
+    pub fn item_ids_at(&self, pos: &Point) -> Vec<ItemId> {
         self.items.iter()
             .filter(|(_, item)| item.pos.is_some())
             .filter(|(_, item)| item.pos.unwrap() == *pos)
-            .map(|(id, _)| id)
+            .map(|(id, _)| id.clone())
             .collect::<Vec<_>>()
     }
 }
