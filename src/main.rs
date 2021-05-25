@@ -406,13 +406,24 @@ async fn main() {
             "Reveal - Mystic Land of Magic and Adventure", title_x, title_y, params
         );
 
-        // draw actor position
+        // display status information
         if let Some(player) = world.actors.get(&world.player_id()) {
-            let text_xy = format!("{}, {}", player.pos.x, player.pos.y);
+            // actor position
+            let text = format!("{}, {}", player.pos.x, player.pos.y);
             let pos = base + Vec2::from((0.0, map_size.y + 24.0 + 10.0));
-            draw_text_ex(&text_xy, pos.x, pos.y, params_info);
+            draw_text_ex(&text, pos.x, pos.y, params_info);
+
+            // names of items at spot
+            let ids = world.items_at(&player.pos);
+            let names = ids.iter()
+                .map(|id| world.items.get(id).unwrap())
+                .map(|item| item.description())
+                .collect::<Vec<String>>();
+            let text = names.join(", ");
+            let pos = pos + Vec2::from((80.0, 0.0));
+            draw_text_ex(&text, pos.x, pos.y, params_info);
         }
-        
+
         next_frame().await
     }
 }

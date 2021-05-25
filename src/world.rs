@@ -44,6 +44,9 @@ impl World {
         let item4 = Item::new(ItemKind::Money(42)).with_owner(self.player_id);
         let id4 = self.items.add(item4);
 
+        let item5 = Item::new(ItemKind::Wand).with_pos((5, 6));
+        self.items.add(item5);
+        
         let player = self.actors.get_mut(&self.player_id).unwrap();
         player.inventory.push(id3);
         player.inventory.push(id4);
