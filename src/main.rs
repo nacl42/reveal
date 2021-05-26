@@ -73,22 +73,27 @@ fn item_index(item: &Item) -> usize {
 }
 
 
+pub struct MapRenderAssets {
+    tile_width: f32,
+    tile_height: f32,
+    tileset_terrain: Tileset,
+    tileset_features: Tileset,
+    tileset_actors: Tileset,
+    tileset_items: Tileset
+}
+
 fn render_map(target: &mut RenderTarget,
               world: &World,
               off_x: i32, off_y: i32,
-              tile_width: f32, tile_height: f32,
-              tileset_terrain: &Tileset,
-              tileset_features: &Tileset,
-              tileset_actors: &Tileset,
-              tileset_items: &Tileset)
+              assets: &MapRenderAssets)
 {
     let sep = vec2(0.0, 0.0);
     let (tiles_x, tiles_y) = (32, 20);
         
     // render target for map drawing
     let map_size = vec2(
-        (tiles_x as f32 * (tile_width + sep.x)) as f32,
-        (tiles_y as f32 * (tile_height + sep.y)) as f32
+        (tiles_x as f32 * (assets.tile_width + sep.x)) as f32,
+        (tiles_y as f32 * (assets.tile_height + sep.y)) as f32
     );
 
     if (target.texture.width() != map_size.x) ||
@@ -119,12 +124,12 @@ fn render_map(target: &mut RenderTarget,
 
                 // draw background
                 let index = terrain_class_index(&terrain);
-                if let Some(&source) = tileset_terrain.sources.get(index) {
+                if let Some(&source) = assets.tileset_terrain.sources.get(index) {
                     draw_texture_ex(
-                        tileset_terrain.texture,
+                        assets.tileset_terrain.texture,
                         px, py, WHITE,
                         DrawTextureParams {
-                            dest_size: Some(Vec2::new(tile_width, tile_height)),
+                            dest_size: Some(Vec2::new(assets.tile_width, assets.tile_height)),
                             source: Some(source),
                             ..Default::default()
                         }
@@ -133,12 +138,12 @@ fn render_map(target: &mut RenderTarget,
 
                 // draw feature (if present)
                 if let Some(index) = terrain_feature_index(&terrain) {
-                    if let Some(&source) = tileset_features.sources.get(index) {
+                    if let Some(&source) = assets.tileset_features.sources.get(index) {
                         draw_texture_ex(
-                            tileset_features.texture,
+                            assets.tileset_features.texture,
                             px, py, WHITE,
                             DrawTextureParams {
-                                dest_size: Some(Vec2::new(tile_width, tile_height)),
+                                dest_size: Some(Vec2::new(assets.tile_width, assets.tile_height)),
                                 source: Some(source),
                                 ..Default::default()
                             }
@@ -155,13 +160,13 @@ fn render_map(target: &mut RenderTarget,
                     };
                     
                     if let Some(&source) =
-                        tileset_items.sources.get(tileset_index)
+                        assets.tileset_items.sources.get(tileset_index)
                     {
                         draw_texture_ex(
-                            tileset_items.texture,
+                            assets.tileset_items.texture,
                             px, py, WHITE,
                             DrawTextureParams {
-                                dest_size: Some(Vec2::new(tile_width, tile_height)),
+                                dest_size: Some(Vec2::new(assets.tile_width, assets.tile_height)),
                                 source: Some(source),
                                 ..Default::default()
                             }
@@ -173,12 +178,12 @@ fn render_map(target: &mut RenderTarget,
                 for _ in world.actors.iter()
                     .filter(|(_, actor)| actor.pos == tile_xy) {
                         let index = 2; // TODO: get index from actor
-                        if let Some(&source) = tileset_actors.sources.get(index) {
+                        if let Some(&source) = assets.tileset_actors.sources.get(index) {
                             draw_texture_ex(
-                                tileset_actors.texture,
+                                assets.tileset_actors.texture,
                                 px, py, WHITE,
                                 DrawTextureParams {
-                                    dest_size: Some(Vec2::new(tile_width, tile_height)),
+                                    dest_size: Some(Vec2::new(assets.tile_width, assets.tile_height)),
                                     source: Some(source),
                                     ..Default::default()
                                 }
@@ -186,9 +191,9 @@ fn render_map(target: &mut RenderTarget,
                         }
                     }
             }                
-            px += tile_width + sep.x;
+            px += assets.tile_width + sep.x;
         }
-        py += tile_height + sep.y;
+        py += assets.tile_height + sep.y;
     }
     // draw texture on screen
     set_default_camera();
@@ -241,24 +246,20 @@ async fn main() {
     // sample text effect (proof of concept)
     let mut effects: Vec<Box<dyn TextEffect>> = vec!();
 
-    // pattern, tileset
     let (width, height) = (32.0, 32.0);
-    let pattern = Pattern::Matrix { width, height, columns: 10, rows: 2 };
-    let tileset_terrain = Tileset::new("assets/tileset32.png", pattern).await.unwrap();
-
-    // feature tileset
-    let pattern = Pattern::Matrix { width, height, columns: 10, rows: 9 };
-    let tileset_features = Tileset::new(
-        "assets/features32.png", pattern
-    ).await.unwrap();
-
-    // item tileset
-    let pattern = Pattern::Matrix { width, height, columns: 10, rows: 3 };
-    let tileset_items = Tileset::new("assets/items32.png", pattern).await.unwrap();
-
-    // actor tileset
-    let pattern = Pattern::Matrix { width, height, columns: 10, rows: 1 };
-    let tileset_actors = Tileset::new("assets/actors32.png", pattern).await.unwrap();
+    let pattern = Pattern::Matrix { width, height, columns: 10, rows: 10 };
+    let map_render_assets = MapRenderAssets {
+        tile_width: 32.0,
+        tile_height: 32.0,
+        tileset_terrain: Tileset::new(
+            "assets/tileset32.png", &pattern).await.unwrap(),
+        tileset_features: Tileset::new(
+            "assets/features32.png", &pattern).await.unwrap(),
+        tileset_items: Tileset::new(
+            "assets/items32.png", &pattern).await.unwrap(),
+        tileset_actors: Tileset::new(
+            "assets/actors32.png", &pattern).await.unwrap(),
+    };    
 
     let (mut off_x, mut off_y) = (0, 0);
 
@@ -392,18 +393,7 @@ async fn main() {
         clear_background(BLACK);
 
         // --- map drawing --
-        render_map(
-            &mut target,
-            &world,
-            off_x,
-            off_y,
-            width,
-            height,
-            &tileset_terrain,
-            &tileset_features,
-            &tileset_actors,
-            &tileset_items
-        );
+        render_map(&mut target, &world, off_x, off_y, &map_render_assets);
 
         // select material (this is just a toy function for testing)
         match is_bw {

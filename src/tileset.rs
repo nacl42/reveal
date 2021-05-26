@@ -3,7 +3,7 @@ use macroquad::prelude::*;
 /// A Pattern defines how the source images are taken from a Tileset.
 /// The Pattern::Matrix defines a rectangular matrix of source rects
 /// width a given `width` and `height` for each rect.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Pattern {
     Matrix { rows: u16, columns: u16, width: f32, height: f32 }
 }
@@ -29,12 +29,11 @@ impl Pattern {
 pub struct Tileset {
     pub texture: Texture2D,
     pub sources: Vec<Rect>,
-    pub pattern: Pattern,
 }
 
 
 impl Tileset {
-    pub async fn new(filename: &'_ str, pattern: Pattern)
+    pub async fn new(filename: &'_ str, pattern: &Pattern)
                      -> Result<Tileset, ()>
     {
         let texture: Texture2D = load_texture(filename).await.unwrap();
@@ -42,7 +41,7 @@ impl Tileset {
         // set sources according to tileset Pattern
         let mut sources = Vec::<Rect>::new();
         match pattern {
-            Pattern::Matrix { rows, columns, width, height } => {
+            &Pattern::Matrix { rows, columns, width, height } => {
                 for y in 0..rows {
                     for x in 0..columns {
                         sources.push(Rect::new(
@@ -57,8 +56,7 @@ impl Tileset {
         Ok(
             Tileset {
                 texture,
-                sources,
-                pattern
+                sources
             }
         )
     }
