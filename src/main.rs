@@ -73,15 +73,14 @@ fn item_index(item: &Item) -> usize {
 }
 
 
-fn render_map(world: &World,
+fn render_map(target: &mut RenderTarget,
+              world: &World,
               off_x: i32, off_y: i32,
               tile_width: f32, tile_height: f32,
               tileset_terrain: &Tileset,
               tileset_features: &Tileset,
               tileset_actors: &Tileset,
-              tileset_items: &Tileset,
-              mut target: Option<RenderTarget>)
-    -> Result<RenderTarget, ()>
+              tileset_items: &Tileset)
 {
     let sep = vec2(0.0, 0.0);
     let (tiles_x, tiles_y) = (32, 20);
@@ -92,20 +91,17 @@ fn render_map(world: &World,
         (tiles_y as f32 * (tile_height + sep.y)) as f32
     );
 
-    if target.is_none() {
-        let _target = render_target(
-            map_size.x as u32,
-            map_size.y as u32
-        );
-        _target.texture.set_filter(FilterMode::Nearest);
-        target = Some(_target);
-    };
+    if (target.texture.width() != map_size.x) ||
+        (target.texture.height() != map_size.y) {
+            *target = render_target(map_size.x as u32, map_size.y as u32);
+        }
+    target.texture.set_filter(FilterMode::Nearest);
 
     // set camera, so that drawing operations act
     // on the texture
     let mut camera = Camera2D::from_display_rect(
         Rect::new(0.0, 0.0, map_size.x, map_size.y));
-    camera.render_target = Some(target.unwrap());
+    camera.render_target = Some(*target);
     set_camera(&camera);
 
     // draw map onto texture
@@ -194,11 +190,8 @@ fn render_map(world: &World,
         }
         py += tile_height + sep.y;
     }
-
     // draw texture on screen
     set_default_camera();
-
-    Ok(target.unwrap())
 }
 
 #[macroquad::main(window_conf)]
@@ -243,7 +236,7 @@ async fn main() {
     let mut is_bw = false;
 
     // the map render target will be initialised in the main loop
-    let mut target: Option<RenderTarget> = None;
+    let mut target = render_target(0, 0);
     
     // sample text effect (proof of concept)
     let mut effects: Vec<Box<dyn TextEffect>> = vec!();
@@ -399,7 +392,8 @@ async fn main() {
         clear_background(BLACK);
 
         // --- map drawing --
-        target = render_map(
+        render_map(
+            &mut target,
             &world,
             off_x,
             off_y,
@@ -408,9 +402,8 @@ async fn main() {
             &tileset_terrain,
             &tileset_features,
             &tileset_actors,
-            &tileset_items,
-            None
-        ).ok();
+            &tileset_items
+        );
 
         // select material (this is just a toy function for testing)
         match is_bw {
@@ -420,22 +413,20 @@ async fn main() {
 
         let base = vec2(10.0, 70.0);
         let mut map_size = vec2(0.0, 0.0);
-        if let Some(target) = target {
-            let texture = target.texture;
-            map_size = vec2(texture.width(), texture.height());
+        let texture = target.texture;
+        map_size = vec2(texture.width(), texture.height());
 
-            draw_texture_ex(
-                texture,
-                base.x,
-                base.y,
-                WHITE,
-                DrawTextureParams {
-                    flip_y: true, // this is a temporary workaround
-                    dest_size: Some(map_size),
-                    ..Default::default()
-                }
-            );
-        }
+        draw_texture_ex(
+            texture,
+            base.x,
+            base.y,
+            WHITE,
+            DrawTextureParams {
+                flip_y: true, // this is a temporary workaround
+                dest_size: Some(map_size),
+                ..Default::default()
+            }
+        );
 
         gl_use_default_material();
 
