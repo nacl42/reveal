@@ -37,17 +37,19 @@ fn window_conf() -> Conf {
 
 fn terrain_class_index(tile: &Terrain) -> usize {
     match tile.kind {
-        TerrainKind::Grass => 0,
-        TerrainKind::Hedge => 5,
-        TerrainKind::StoneFloor => 11,
-        TerrainKind::Path => 1,
+        TerrainKind::Grass => 1,
+        TerrainKind::Path => 2,
+        TerrainKind::Water => 3,
+        TerrainKind::Wall => 4,
+        //Sand => 5,
+        TerrainKind::Hedge => 6,
         TerrainKind::ThickGrass => 10,
-        TerrainKind::Water => 2,
-        TerrainKind::Wall => 3,
+        TerrainKind::StoneFloor => 11,
         TerrainKind::ShallowWater => 12,
+        // Grate => 13,
         TerrainKind::Door(_) => 14,
         TerrainKind::Window => 15,
-        _ => 0
+        _ => 0,
     }
 }
 
@@ -85,10 +87,10 @@ pub struct MapRenderAssets {
 fn render_map(target: &mut RenderTarget,
               world: &World,
               off_x: i32, off_y: i32,
+              tiles_x: i32, tiles_y: i32,
               assets: &MapRenderAssets)
 {
     let sep = vec2(0.0, 0.0);
-    let (tiles_x, tiles_y) = (32, 20);
         
     // render target for map drawing
     let map_size = vec2(
@@ -248,18 +250,22 @@ async fn main() {
     let mut is_bw = false;
 
     // the map render target will be initialised in the main loop
-    let mut target = render_target(0, 0);
+    let mut main_map_target = render_target(0, 0);
+    let mut mini_map_target = render_target(0, 0);
     
     // sample text effect (proof of concept)
     let mut effects: Vec<Box<dyn TextEffect>> = vec!();
 
     let (width, height) = (32.0, 32.0);
-    let pattern = Pattern::Matrix { width, height, columns: 10, rows: 10 };
-    let map_render_assets = MapRenderAssets {
-        tile_width: 32.0,
-        tile_height: 32.0,
+    let pattern = Pattern::Matrix {
+        width, height,
+        columns: 10, rows: 10
+    };
+    let main_map_render_assets = MapRenderAssets {
+        tile_width: width,
+        tile_height: height,
         tileset_terrain: Tileset::new(
-            "assets/tileset32.png", &pattern).await.ok(),
+            "assets/terrain32.png", &pattern).await.ok(),
         tileset_features: Tileset::new(
             "assets/features32.png", &pattern).await.ok(),
         tileset_items: Tileset::new(
@@ -268,6 +274,21 @@ async fn main() {
             "assets/actors32.png", &pattern).await.ok(),
     };    
 
+    // For now, the mini map uses the identical tileset as the main
+    // map. We could use the tiny tileset2.png, but as long as
+    // rendering speed is ok, it is much easier to maintain only one
+    // tileset.
+    let mini_map_render_assets = MapRenderAssets {
+        tile_width: 4.0,
+        tile_height: 4.0,
+        tileset_terrain: Tileset::new(
+            "assets/terrain32.png", &pattern
+        ).await.ok(),
+        tileset_features: None,
+        tileset_items: None,
+        tileset_actors: None
+    };
+    
     let (mut off_x, mut off_y) = (0, 0);
 
     // the World contains the actual game data
@@ -400,7 +421,20 @@ async fn main() {
         clear_background(BLACK);
 
         // --- map drawing --
-        render_map(&mut target, &world, off_x, off_y, &map_render_assets);
+        render_map(
+            &mut main_map_target,
+            &world,
+            off_x, off_y,
+            24, 16,
+            &main_map_render_assets
+        );
+        render_map(
+            &mut mini_map_target,
+            &world,
+            off_x, off_y,
+            64,40,
+            &mini_map_render_assets
+        );
 
         // select material (this is just a toy function for testing)
         match is_bw {
@@ -410,7 +444,7 @@ async fn main() {
 
         let base = vec2(10.0, 70.0);
         let mut map_size = vec2(0.0, 0.0);
-        let texture = target.texture;
+        let texture = main_map_target.texture;
         map_size = vec2(texture.width(), texture.height());
 
         draw_texture_ex(
@@ -421,6 +455,19 @@ async fn main() {
             DrawTextureParams {
                 flip_y: true, // this is a temporary workaround
                 dest_size: Some(map_size),
+                ..Default::default()
+            }
+        );
+
+        // draw mini map
+        let texture = mini_map_target.texture;
+        let topleft = base + vec2(map_size.x, 0.0) + vec2(20.0, 0.0);
+        let mut mini_map_size = vec2(texture.width(), texture.height());
+        draw_texture_ex(
+            texture, topleft.x, topleft.y, WHITE,
+            DrawTextureParams {
+                flip_y: true,
+                dest_size: Some(mini_map_size),
                 ..Default::default()
             }
         );
