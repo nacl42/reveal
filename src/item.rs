@@ -1,4 +1,4 @@
-use crate::point::Point;
+use crate::point::RvPoint;
 use crate::actor::{ActorId};
 use crate::id::Id;
 use crate::idmap::IdMap;
@@ -10,7 +10,7 @@ pub type ItemMap = IdMap<Item>;
 #[derive(Debug, Clone)]
 pub struct Item {
     pub kind: ItemKind,
-    pub pos: Option<Point>,
+    pub pos: Option<RvPoint>,
     pub owner: Option<ActorId>
 }
 
@@ -24,7 +24,7 @@ impl Item {
     }
 
     pub fn with_pos<P>(mut self, pos: P) -> Self
-    where P: Into<Point>
+    where P: Into<RvPoint>
     {
         self.pos = Some(pos.into());
         self

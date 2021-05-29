@@ -10,15 +10,17 @@ mod world;
 mod flake;
 mod id;
 mod idmap;
+mod actions;
 
 use effect::{TextEffect, ScaleText};
 use tileset::{Tileset, Pattern};
 use terrain::{TerrainKind, Terrain, TerrainFeature, TerrainMap};
-use actor::{Actor}; //, ActorKind, ActorId, ActorMap};
-use point::Point;
+use actor::{Actor, ActorId}; //, ActorKind, ActorId, ActorMap};
+use point::{RvPoint, RvRect};
 use item::{ItemKind}; //ItemId, Item, ItemKind, ItemMap};
-use world::World;
+use world::{World, ViewportMode, adjust_viewport};
 use item::Item;
+use actions::Action;
 
 const CRT_FRAGMENT_SHADER: &'static str = include_str!("shaders/vignette_fragment.glsl");
 const CRT_VERTEX_SHADER: &'static str = include_str!("shaders/vignette_vertex.glsl");
@@ -119,7 +121,7 @@ fn render_map(target: &mut RenderTarget,
     for y in 0..tiles_y {
         let mut px = 0.0;
         for x in 0..tiles_x {
-            let tile_xy = Point::from((x as i32 + off_x, y as i32 + off_y));
+            let tile_xy = RvPoint::from((x as i32 + off_x, y as i32 + off_y));
                 
             // draw terrain
             if let Some(terrain) = world.terrain.get(&tile_xy) {
@@ -288,9 +290,10 @@ async fn main() {
         tileset_items: None,
         tileset_actors: None
     };
-    
-    let (mut off_x, mut off_y) = (0, 0);
 
+    let mut viewport = RvRect::from((0, 0, 16, 12));
+    let border_size = RvPoint::from((4, 3));
+    
     // the World contains the actual game data
     // all of the above will be moved into the World, one by one
     let mut world = World::new();
@@ -300,6 +303,8 @@ async fn main() {
     let mut last_update = get_time();
     const DELTA: f64 = 0.01;
     let (title_x, title_y) = (10.0, 42.0);
+
+    let mut actions: Vec<Action> = vec!();
     
     loop {
         // update, if necessary
@@ -333,28 +338,38 @@ async fn main() {
 
             // arrows keys => scroll map
             if is_key_down(KeyCode::Up) {
-                if off_y > 0 {
-                    off_y -= 1;
+                if viewport.y1 > 0 {
+                    viewport.y1 -= 1;
                 }
             }
 
             if is_key_down(KeyCode::Left) {
-                if off_x > 0 {
-                    off_x -= 1;
+                if viewport.x1 > 0 {
+                    viewport.x1 -= 1;
                 }
             }
 
             if is_key_down(KeyCode::Right) {
-                off_x += 1;
+                viewport.x1 += 1;
             }
 
             if is_key_down(KeyCode::Down) {
-                off_y += 1;
+                viewport.y1 += 1;
             }
 
+            // C => Center Viewport
+            if is_key_pressed(KeyCode::C) {
+                adjust_viewport(
+                    &mut viewport,
+                    &border_size,
+                    &world.player_pos(),
+                    ViewportMode::Center
+                );
+            }
+            
             // ASDW => move player
             fn move_if_not_blocked<P>(player: &mut Actor, offset: P, terrain: &TerrainMap)
-            where P: Into<Point>
+            where P: Into<RvPoint>
             {
                 let new_pos = player.pos + offset.into();
                 if let Some(terrain) = terrain.get(&new_pos) {
@@ -363,12 +378,39 @@ async fn main() {
                     }
                 }
             }
+
+            fn move_by(world: &World, actor_id: &ActorId, dx: i32, dy: i32, follow: bool) -> Option<Action> {
+                let actor = world.actors.get(actor_id).unwrap();
+                let new_pos = actor.pos + (dx, dy).into();
+                if !World::is_blocking(&new_pos, &world.terrain, &world.actors) {
+                    if follow {
+                        let mode = match (dx, dy) {
+                            (0, -1) => ViewportMode::North,
+                            (0, 1) => ViewportMode::South,
+                            (1, 0) => ViewportMode::East,
+                            (-1, 0) => ViewportMode::West,
+                            _ => ViewportMode::Center
+                        };
+                        // TODO: MoveFollow with mode
+                        return Some(Action::Move { actor_id: actor_id.clone(), pos: new_pos.clone()});
+                    } else {
+                        return Some(Action::Move { actor_id: actor_id.clone(), pos: new_pos.clone() });
+                    }
+                }
+                None
+            }
+
             let player_id = world.player_id();
             let actors = &mut world.actors;
   
             if is_key_pressed(KeyCode::A) {
-                if let Some(mut player) = actors.get_mut(&player_id) {
-                    move_if_not_blocked(&mut player, (-1, 0), &world.terrain);
+                if let Some(player) = actors.get(&player_id) {
+                    let pos = player.pos + (-1, 0).into();
+                    //let actor_id = world.player_id();
+                    actions.push(
+                        Action::Move { actor_id: player_id, pos }
+                    );
+                    //move_if_not_blocked(&mut player, (-1, 0), &world.terrain);
                 }
             }
             if is_key_pressed(KeyCode::W) {
@@ -401,7 +443,7 @@ async fn main() {
                 if let Some(player) = world.actors.get(&player_id) {
                     for id in &world.item_ids_at(&player.pos) {
                         let item = world.items.get_mut(&id).unwrap();
-                        println!("pickung up {}", item.description());
+                        println!("picking up {}", item.description());
                         item.owner = Some(player_id);
                         item.pos = None;
                         world.actors.get_mut(&player_id).unwrap()
@@ -424,14 +466,14 @@ async fn main() {
         render_map(
             &mut main_map_target,
             &world,
-            off_x, off_y,
+            viewport.x1, viewport.y1,
             24, 16,
             &main_map_render_assets
         );
         render_map(
             &mut mini_map_target,
             &world,
-            off_x, off_y,
+            viewport.x1, viewport.y1,
             64,40,
             &mini_map_render_assets
         );
@@ -510,6 +552,18 @@ async fn main() {
             }
         }
 
+        // process game actions
+        while actions.len() > 0 {
+            match actions.pop().unwrap() {
+                Action::Move {actor_id, pos} => {
+                    if let Some(player) = world.actors.get_mut(&actor_id) {
+                        player.pos = pos;
+                    }
+                    // TODO: update map
+                }
+            }
+        }
+        
         next_frame().await
     }
 }

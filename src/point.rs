@@ -1,31 +1,31 @@
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy, Hash, Default)]
-pub struct Point {
+pub struct RvPoint {
     pub x: i32,
     pub y: i32
 }
 
-impl Point {
+impl RvPoint {
     #[allow(dead_code)]
     pub fn new(x: i32, y: i32) -> Self {
-        Point {
+        RvPoint {
             x,
             y
         }
     }
 }
 
-impl From<(i32, i32)> for Point {
+impl From<(i32, i32)> for RvPoint {
     fn from(xy: (i32, i32)) -> Self {
-        Point {
+        RvPoint {
             x: xy.0,
             y: xy.1
         }
     }
 }
 
-impl Add for Point {
+impl Add for RvPoint {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
@@ -37,7 +37,7 @@ impl Add for Point {
 }
 
 
-impl AddAssign for Point {
+impl AddAssign for RvPoint {
     fn add_assign(&mut self, other: Self) {
         *self = Self {
             x: self.x + other.x,
@@ -46,7 +46,7 @@ impl AddAssign for Point {
     }
 }
 
-impl Sub for Point {
+impl Sub for RvPoint {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {
@@ -58,7 +58,7 @@ impl Sub for Point {
 }
 
 
-impl SubAssign for Point {
+impl SubAssign for RvPoint {
     fn sub_assign(&mut self, other: Self) {
         *self = Self {
             x: self.x - other.x,
@@ -66,3 +66,133 @@ impl SubAssign for Point {
         };
     }
 }
+
+#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy)]
+pub struct RvRect {
+    pub y1: i32,
+    pub x1: i32,
+    pub y2: i32, // (x2, y2) is inclusive
+    pub x2: i32,
+}
+
+impl RvRect {
+    pub fn width(&self) -> i32 {
+        self.x2 - self.x1 + 1
+    }
+
+    pub fn height(&self) -> i32 {
+        self.y2 - self.y1 + 1
+    }
+
+    #[allow(dead_code)]
+    pub fn size(&self) -> RvPoint {
+        RvPoint { x: self.width(), y: self.height() }
+    }
+    
+    pub fn top_left(&self) -> RvPoint {
+        RvPoint { x: self.x1, y: self.y1 }
+    }
+
+    pub fn top_right(&self) -> RvPoint {
+        RvPoint { x: self.x2, y: self.y1 }
+    }
+
+    pub fn bottom_left(&self) -> RvPoint {
+        RvPoint { x: self.x1, y: self.y2 }
+    }
+
+    pub fn bottom_right(&self) -> RvPoint {
+        RvPoint { x: self.x2, y: self.y2 }
+    }
+
+    pub fn center(&self)-> RvPoint {
+        RvPoint {
+            x: self.x1 + ((self.x2 - self.x1) / 2) as i32,
+            y: self.y1 + ((self.y2 - self.y1) / 2) as i32
+        }
+    }
+
+    // return true if the given RvPoint p lies within the RvRect
+    pub fn contains(&self, p: &RvPoint) -> bool {
+        (p.x >= self.x1)
+            && (p.x <= self.x2)
+            && (p.y >= self.y1)
+            && (p.y <= self.y2)
+    }
+
+    // return iterator over all points of the rect
+    pub fn iter(&self) -> impl Iterator<Item=RvPoint> {
+        RvRectIterator::new(self.clone())
+    }
+}
+
+
+
+impl From<(i32, i32, i32, i32)> for RvRect {
+    fn from(xywh: (i32, i32, i32, i32)) -> RvRect {
+        RvRect {
+            x1: xywh.0,
+            y1: xywh.1,
+            x2: xywh.0 + xywh.2,
+            y2: xywh.1 + xywh.3,
+        }
+    }
+}
+
+impl From<(RvPoint, RvPoint)> for RvRect {
+    fn from(points: (RvPoint, RvPoint)) -> RvRect {
+        // TODO: swap points if p1 < p2 ???
+        let p1 = points.0;
+        let p2 = points.1;
+        RvRect {
+            y1: p1.y,
+            x1: p1.x,
+            y2: p2.y - p1.y,
+            x2: p2.x - p1.x
+        }
+    }
+}
+
+
+struct RvRectIterator {
+    x1: i32, x2: i32, y2: i32,
+    point: RvPoint
+}
+
+
+impl RvRectIterator {
+    fn new(rect: RvRect) -> RvRectIterator {
+        let x1 = std::cmp::min(rect.x1, rect.x2);
+        let x2 = std::cmp::max(rect.x1, rect.x2);
+        let y1 = std::cmp::min(rect.y1, rect.y2);
+        let y2 = std::cmp::max(rect.y1, rect.y2) ;
+
+        RvRectIterator {
+            x1, x2, y2,
+            point: RvPoint { x: x1 - 1, y: y1 }
+        }
+    }
+}
+
+// cartesian product of (x1..x2) x (y1..y2)
+impl Iterator for RvRectIterator {
+    type Item = RvPoint;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.point.x < self.x2 {
+            self.point.x += 1; // advance column
+            Some(self.point)
+        } else {
+            // reset column, advance row
+            self.point.x = self.x1;
+            self.point.y += 1;
+            if self.point.y <= self.y2 {
+                Some(self.point)
+            } else {
+                // reached last row and column
+                None
+            }
+        }
+    }
+}
+

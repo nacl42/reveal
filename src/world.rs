@@ -1,8 +1,8 @@
 
-use crate::point::Point;
+use crate::point::{RvPoint, RvRect};
 use crate::item::{Item, ItemKind, ItemMap, ItemId};
 use crate::actor::{Actor, ActorKind, ActorMap, ActorId};
-use crate::terrain::{TerrainMap, read_terrain_from_file};
+use crate::terrain::{Terrain, TerrainKind, TerrainMap, read_terrain_from_file};
 
 //use crate::idmap::{IdMap};
 //use crate::tile::TileMap;
@@ -57,11 +57,84 @@ impl World {
         self.player_id
     }
 
-    pub fn item_ids_at(&self, pos: &Point) -> Vec<ItemId> {
+    pub fn player_pos(&self) -> RvPoint {
+        let id = self.player_id.clone();
+        let player = self.actors.get(&id).unwrap();
+        player.pos
+    }
+    
+    pub fn item_ids_at(&self, pos: &RvPoint) -> Vec<ItemId> {
         self.items.iter()
             .filter(|(_, item)| item.pos.is_some())
             .filter(|(_, item)| item.pos.unwrap() == *pos)
             .map(|(id, _)| id.clone())
             .collect::<Vec<_>>()
     }
+
+    // Defined as function, not as method, so that we don't need
+    // to borrow the whole `World` when using this function.
+    pub fn is_blocking(pos: &RvPoint, terrain: &TerrainMap, actors: &ActorMap) -> bool {
+        World::tile_blocking(pos, terrain)
+            || World::actor_blocking(pos, actors)
+    }
+
+    pub fn tile_blocking(pos: &RvPoint, terrain: &TerrainMap) -> bool {
+        let default_tile = Terrain::from(TerrainKind::Empty);
+        terrain.get(pos).unwrap_or(&default_tile).is_blocking()
+    }
+
+    pub fn actor_blocking(pos: &RvPoint, actors: &ActorMap) -> bool {
+        actors.iter()
+            //.filter(|(_, actor)| actor.pos)
+            .any(|(_, actor)| actor.pos == *pos)
+    }
 }
+
+
+#[derive(Debug, Copy, Clone)]
+pub enum ViewportMode { North, South, East, West, Center }
+
+/// adjust the given viewport
+pub fn adjust_viewport(viewport: &mut RvRect, border_size: &RvPoint,
+                       pos: &RvPoint, mode: ViewportMode)
+{
+    match mode {
+        ViewportMode::North => {
+            let dy = -1 * (viewport.y1 - pos.y + border_size.y);
+            if dy < 0 {
+                viewport.y1 += dy;
+                viewport.y2 += dy;
+            }
+        },
+        ViewportMode::South => {
+            let dy = -1 * (viewport.y2 - pos.y - border_size.y);
+            if dy > 0 {
+                viewport.y1 += dy;
+                viewport.y2 += dy;
+            }
+        },
+        ViewportMode::East => {
+            let dx = -1 * (viewport.x2 - pos.x - border_size.x);
+            if dx > 0 {
+                viewport.x1 += dx;
+                viewport.x2 += dx;
+            }
+        },
+        ViewportMode::West => {
+            let dx = -1 * (viewport.x1 - pos.x + border_size.x );
+            if dx < 0 {
+                viewport.x1 += dx;
+                viewport.x2 += dx;
+            }
+        },
+        ViewportMode::Center => {
+            let delta = *pos - viewport.center();
+            viewport.x1 += delta.x;
+            viewport.x2 += delta.x;
+            viewport.y1 += delta.y;
+            viewport.y2 += delta.y;
+        }
+    }
+}
+
+
