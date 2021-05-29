@@ -1,10 +1,11 @@
 
 use crate::point::Point;
 use crate::actor::ActorId;
-use crate::world::World;
+use crate::world::{World, ViewportMode};
 
 #[derive(Debug)]
 pub enum Action {
+    MoveFollow { actor_id: ActorId, pos: Point, mode: ViewportMode },
     Move { actor_id: ActorId, pos: Point }
 }
 

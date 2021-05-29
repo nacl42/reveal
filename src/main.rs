@@ -292,8 +292,8 @@ async fn main() {
         tileset_actors: None
     };
 
-    let mut viewport = Rectangle::from((0, 0, 16, 12));
-    let border_size = Point::from((4, 3));
+    let mut viewport = Rectangle::from((0, 0, 20, 16));
+    let border_size = Point::from((2, 2));
     
     // the World contains the actual game data
     // all of the above will be moved into the World, one by one
@@ -341,21 +341,25 @@ async fn main() {
             if is_key_down(KeyCode::Up) {
                 if viewport.y1 > 0 {
                     viewport.y1 -= 1;
+                    viewport.y2 -= 1;
                 }
             }
 
             if is_key_down(KeyCode::Left) {
                 if viewport.x1 > 0 {
                     viewport.x1 -= 1;
+                    viewport.x2 -= 1;
                 }
             }
 
             if is_key_down(KeyCode::Right) {
                 viewport.x1 += 1;
+                viewport.x2 += 1;
             }
 
             if is_key_down(KeyCode::Down) {
                 viewport.y1 += 1;
+                viewport.y2 += 1;
             }
 
             // C => Center Viewport
@@ -392,8 +396,7 @@ async fn main() {
                             (-1, 0) => ViewportMode::West,
                             _ => ViewportMode::Center
                         };
-                        // TODO: MoveFollow with mode
-                        return Some(Action::Move { actor_id: actor_id.clone(), pos: new_pos.clone()});
+                        return Some(Action::MoveFollow { actor_id: actor_id.clone(), pos: new_pos.clone(), mode});
                     } else {
                         return Some(Action::Move { actor_id: actor_id.clone(), pos: new_pos.clone() });
                     }
@@ -402,34 +405,40 @@ async fn main() {
             }
 
             let player_id = world.player_id();
-            let actors = &mut world.actors;
   
             if is_key_pressed(KeyCode::A) {
-                if let Some(player) = actors.get(&player_id) {
-                    let pos = player.pos + (-1, 0).into();
-                    //let actor_id = world.player_id();
-                    actions.push(
-                        Action::Move { actor_id: player_id, pos }
-                    );
-                    //move_if_not_blocked(&mut player, (-1, 0), &world.terrain);
-                }
-            }
-            if is_key_pressed(KeyCode::W) {
-                if let Some(mut player) = actors.get_mut(&player_id) {
-                    move_if_not_blocked(&mut player, (0, -1), &world.terrain);
-                }
-            }
-            if is_key_pressed(KeyCode::D) {
-                if let Some(mut player) = actors.get_mut(&player_id) {
-                    move_if_not_blocked(&mut player, (1, 0), &world.terrain);
-                }
-            }
-            if is_key_pressed(KeyCode::S) {
-                if let Some(mut player) = actors.get_mut(&player_id) {
-                    move_if_not_blocked(&mut player, (0, 1), &world.terrain);
-                }
+                if let Some(move_action) =
+                    move_by(&world, &player_id, -1, 0, true) {
+                        actions.push(move_action);
+                        // TODO: action::end_turn()
+                    }
             }
 
+            if is_key_pressed(KeyCode::W) {
+                if let Some(move_action) =
+                    move_by(&world, &player_id, 0, -1, true) {
+                        actions.push(move_action);
+                        // TODO: action::end_turn()
+                    }
+            }
+
+            if is_key_pressed(KeyCode::D) {
+                if let Some(move_action) =
+                    move_by(&world, &player_id, 1, 0, true) {
+                        actions.push(move_action);
+                        // TODO: action::end_turn()
+                    }
+            }
+
+            if is_key_pressed(KeyCode::S) {
+                if let Some(move_action) =
+                    move_by(&world, &player_id, 0, 1, true) {
+                        actions.push(move_action);
+                        // TODO: action::end_turn()
+                    }
+            }
+
+            let actors = &mut world.actors;
             
             // T => show off text effect
             if is_key_pressed(KeyCode::T) {
@@ -468,9 +477,10 @@ async fn main() {
             &mut main_map_target,
             &world,
             viewport.x1, viewport.y1,
-            24, 16,
+            viewport.width(), viewport.height(),
             &main_map_render_assets
         );
+
         render_map(
             &mut mini_map_target,
             &world,
@@ -504,8 +514,11 @@ async fn main() {
 
         // draw mini map
         let texture = mini_map_target.texture;
-        let topleft = base + vec2(map_size.x, 0.0) + vec2(20.0, 0.0);
-        let mut mini_map_size = vec2(texture.width(), texture.height());
+        let topleft =
+            base +
+            vec2(main_map_render_assets.tile_width * viewport.width() as f32, 0.0) +
+            vec2(20.0, 0.0);
+        let mini_map_size = vec2(texture.width(), texture.height());
         draw_texture_ex(
             texture, topleft.x, topleft.y, WHITE,
             DrawTextureParams {
@@ -561,6 +574,17 @@ async fn main() {
                         player.pos = pos;
                     }
                     // TODO: update map
+                },
+                Action::MoveFollow {actor_id, pos, mode} => {
+                    if let Some(player) = world.actors.get_mut(&actor_id) {
+                        player.pos = pos;
+                        adjust_viewport(
+                            &mut viewport,
+                            &border_size,
+                            &player.pos,
+                            mode
+                        )
+                    }
                 }
             }
         }
