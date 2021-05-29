@@ -1,5 +1,5 @@
 
-use crate::point::{RvPoint, RvRect};
+use crate::point::{Point, Rectangle};
 use crate::item::{Item, ItemKind, ItemMap, ItemId};
 use crate::actor::{Actor, ActorKind, ActorMap, ActorId};
 use crate::terrain::{Terrain, TerrainKind, TerrainMap, read_terrain_from_file};
@@ -57,13 +57,13 @@ impl World {
         self.player_id
     }
 
-    pub fn player_pos(&self) -> RvPoint {
+    pub fn player_pos(&self) -> Point {
         let id = self.player_id.clone();
         let player = self.actors.get(&id).unwrap();
         player.pos
     }
     
-    pub fn item_ids_at(&self, pos: &RvPoint) -> Vec<ItemId> {
+    pub fn item_ids_at(&self, pos: &Point) -> Vec<ItemId> {
         self.items.iter()
             .filter(|(_, item)| item.pos.is_some())
             .filter(|(_, item)| item.pos.unwrap() == *pos)
@@ -73,17 +73,17 @@ impl World {
 
     // Defined as function, not as method, so that we don't need
     // to borrow the whole `World` when using this function.
-    pub fn is_blocking(pos: &RvPoint, terrain: &TerrainMap, actors: &ActorMap) -> bool {
+    pub fn is_blocking(pos: &Point, terrain: &TerrainMap, actors: &ActorMap) -> bool {
         World::tile_blocking(pos, terrain)
             || World::actor_blocking(pos, actors)
     }
 
-    pub fn tile_blocking(pos: &RvPoint, terrain: &TerrainMap) -> bool {
+    pub fn tile_blocking(pos: &Point, terrain: &TerrainMap) -> bool {
         let default_tile = Terrain::from(TerrainKind::Empty);
         terrain.get(pos).unwrap_or(&default_tile).is_blocking()
     }
 
-    pub fn actor_blocking(pos: &RvPoint, actors: &ActorMap) -> bool {
+    pub fn actor_blocking(pos: &Point, actors: &ActorMap) -> bool {
         actors.iter()
             //.filter(|(_, actor)| actor.pos)
             .any(|(_, actor)| actor.pos == *pos)
@@ -95,8 +95,8 @@ impl World {
 pub enum ViewportMode { North, South, East, West, Center }
 
 /// adjust the given viewport
-pub fn adjust_viewport(viewport: &mut RvRect, border_size: &RvPoint,
-                       pos: &RvPoint, mode: ViewportMode)
+pub fn adjust_viewport(viewport: &mut Rectangle, border_size: &Point,
+                       pos: &Point, mode: ViewportMode)
 {
     match mode {
         ViewportMode::North => {

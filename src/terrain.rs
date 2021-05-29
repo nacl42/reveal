@@ -1,9 +1,9 @@
-use crate::point::RvPoint;
+use crate::point::Point;
 use std::collections::HashMap;
 use rand::Rng;
 use maplit::hashmap;
 
-pub type TerrainMap = HashMap<RvPoint, Terrain>;
+pub type TerrainMap = HashMap<Point, Terrain>;
 
 #[derive(Debug, Clone)]
 pub struct Terrain {

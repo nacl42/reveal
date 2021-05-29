@@ -1,4 +1,4 @@
-use crate::point::RvPoint;
+use crate::point::Point;
 use crate::item::ItemId;
 use crate::idmap::IdMap;
 
@@ -7,13 +7,13 @@ use crate::id::Id;
 #[derive(Debug, Clone)]
 pub struct Actor {
     pub kind: ActorKind,
-    pub pos: RvPoint,
+    pub pos: Point,
     pub inventory: Vec<ItemId>
 }
 
 impl Actor {
     pub fn new<P>(kind: ActorKind, pos: P) -> Self
-    where P: Into<RvPoint>
+    where P: Into<Point>
     {
         Self {
             kind,

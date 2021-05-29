@@ -16,7 +16,7 @@ use effect::{TextEffect, ScaleText};
 use tileset::{Tileset, Pattern};
 use terrain::{TerrainKind, Terrain, TerrainFeature, TerrainMap};
 use actor::{Actor, ActorId}; //, ActorKind, ActorId, ActorMap};
-use point::{RvPoint, RvRect};
+use point::{Point, Rectangle};
 use item::{ItemKind}; //ItemId, Item, ItemKind, ItemMap};
 use world::{World, ViewportMode, adjust_viewport};
 use item::Item;
@@ -121,7 +121,7 @@ fn render_map(target: &mut RenderTarget,
     for y in 0..tiles_y {
         let mut px = 0.0;
         for x in 0..tiles_x {
-            let tile_xy = RvPoint::from((x as i32 + off_x, y as i32 + off_y));
+            let tile_xy = Point::from((x as i32 + off_x, y as i32 + off_y));
                 
             // draw terrain
             if let Some(terrain) = world.terrain.get(&tile_xy) {
@@ -217,6 +217,7 @@ async fn main() {
     println!("Press <q> to quit and <t> to scale text!");
     println!("Try <b> to switch color vision.");
     println!("Move player with <A>, <S>, <D>, <W>.");
+    println!("Center map on player using <C>!");
     println!("List inventory with <I>, pick up items with <P>.");
     println!("...and of course <up>, <down>, <left>, <right> to move the map!");
     
@@ -291,8 +292,8 @@ async fn main() {
         tileset_actors: None
     };
 
-    let mut viewport = RvRect::from((0, 0, 16, 12));
-    let border_size = RvPoint::from((4, 3));
+    let mut viewport = Rectangle::from((0, 0, 16, 12));
+    let border_size = Point::from((4, 3));
     
     // the World contains the actual game data
     // all of the above will be moved into the World, one by one
@@ -369,7 +370,7 @@ async fn main() {
             
             // ASDW => move player
             fn move_if_not_blocked<P>(player: &mut Actor, offset: P, terrain: &TerrainMap)
-            where P: Into<RvPoint>
+            where P: Into<Point>
             {
                 let new_pos = player.pos + offset.into();
                 if let Some(terrain) = terrain.get(&new_pos) {

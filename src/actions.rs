@@ -1,11 +1,11 @@
 
-use crate::point::RvPoint;
+use crate::point::Point;
 use crate::actor::ActorId;
 use crate::world::World;
 
 #[derive(Debug)]
 pub enum Action {
-    Move { actor_id: ActorId, pos: RvPoint }
+    Move { actor_id: ActorId, pos: Point }
 }
 
 // pub fn move_by(world: &World, actor_id: &ActorId, dx: i32, dy: i32, follow: bool) ->
