@@ -32,6 +32,7 @@ fn window_conf() -> Conf {
         window_title: "Reveal".to_owned(),
         window_width: 1024,
         window_height: 800,
+        //fullscreen: true,
         ..Default::default()
     }
 }

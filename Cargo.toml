@@ -7,6 +7,6 @@ license = "MIT/Apache-2.0"
 description = "A two-dimensional, turn-based, roguelike adventure game"
 
 [dependencies]
-macroquad = "0.3.3"
+macroquad = "0.3.5"
 maplit = "1.0"
 rand = "0.8"
