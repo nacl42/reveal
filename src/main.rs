@@ -377,17 +377,6 @@ async fn main() {
             }
             
             // ASDW => move player
-            fn move_if_not_blocked<P>(player: &mut Actor, offset: P, terrain: &TerrainMap)
-            where P: Into<Point>
-            {
-                let new_pos = player.pos + offset.into();
-                if let Some(terrain) = terrain.get(&new_pos) {
-                    if !terrain.is_blocking() {
-                        player.pos = new_pos;
-                    }
-                }
-            }
-
             let player_id = world.player_id();
   
             if is_key_pressed(KeyCode::A) {
