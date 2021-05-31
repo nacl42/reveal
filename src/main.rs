@@ -488,10 +488,10 @@ async fn main() {
 
         // draw mini map
         let texture = mini_map_target.texture;
-        let topleft =
-            base +
-            vec2(main_map_render_assets.tile_width * viewport.width() as f32, 0.0) +
-            vec2(20.0, 0.0);
+        let topleft = base + vec2(
+            screen_width() - mini_map_target.texture.width() - 20.0,
+            screen_height() - mini_map_target.texture.height() - 20.0
+        );
         let mini_map_size = vec2(texture.width(), texture.height());
         draw_texture_ex(
             texture, topleft.x, topleft.y, WHITE,
