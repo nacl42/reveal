@@ -3,6 +3,7 @@ use crate::point::{Point, Rectangle};
 use crate::item::{Item, ItemKind, ItemMap, ItemId};
 use crate::actor::{Actor, ActorKind, ActorMap, ActorId};
 use crate::terrain::{Terrain, TerrainKind, TerrainMap, read_terrain_from_file};
+use crate::action::Action;
 
 //use crate::idmap::{IdMap};
 //use crate::tile::TileMap;
@@ -138,3 +139,33 @@ pub fn adjust_viewport(viewport: &mut Rectangle, border_size: &Point,
 }
 
 
+pub fn move_by(world: &World, actor_id: &ActorId, dx: i32, dy: i32, follow: bool)
+           -> Option<Action>
+{
+    let actor = world.actors.get(actor_id).unwrap();
+    let new_pos = actor.pos + (dx, dy).into();
+    if !World::is_blocking(&new_pos, &world.terrain, &world.actors) {
+        if follow {
+            let mode = match (dx, dy) {
+                (0, -1) => ViewportMode::North,
+                (0, 1) => ViewportMode::South,
+                (1, 0) => ViewportMode::East,
+                (-1, 0) => ViewportMode::West,
+                _ => ViewportMode::Center
+            };
+            return Some(
+                Action::MoveFollow {
+                    actor_id: actor_id.clone(),
+                    pos: new_pos.clone(),
+                    mode
+                });
+        } else {
+            return Some(
+                Action::Move {
+                    actor_id: actor_id.clone(),
+                    pos: new_pos.clone()
+                });
+        }
+    }
+    None
+}

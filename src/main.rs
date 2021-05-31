@@ -10,7 +10,7 @@ mod world;
 mod flake;
 mod id;
 mod idmap;
-mod actions;
+mod action;
 
 use effect::{TextEffect, ScaleText};
 use tileset::{Tileset, Pattern};
@@ -20,7 +20,7 @@ use point::{Point, Rectangle};
 use item::{ItemKind}; //ItemId, Item, ItemKind, ItemMap};
 use world::{World, ViewportMode, adjust_viewport};
 use item::Item;
-use actions::Action;
+use action::Action;
 
 const CRT_FRAGMENT_SHADER: &'static str = include_str!("shaders/vignette_fragment.glsl");
 const CRT_VERTEX_SHADER: &'static str = include_str!("shaders/vignette_vertex.glsl");
@@ -384,31 +384,11 @@ async fn main() {
                 }
             }
 
-            fn move_by(world: &World, actor_id: &ActorId, dx: i32, dy: i32, follow: bool) -> Option<Action> {
-                let actor = world.actors.get(actor_id).unwrap();
-                let new_pos = actor.pos + (dx, dy).into();
-                if !World::is_blocking(&new_pos, &world.terrain, &world.actors) {
-                    if follow {
-                        let mode = match (dx, dy) {
-                            (0, -1) => ViewportMode::North,
-                            (0, 1) => ViewportMode::South,
-                            (1, 0) => ViewportMode::East,
-                            (-1, 0) => ViewportMode::West,
-                            _ => ViewportMode::Center
-                        };
-                        return Some(Action::MoveFollow { actor_id: actor_id.clone(), pos: new_pos.clone(), mode});
-                    } else {
-                        return Some(Action::Move { actor_id: actor_id.clone(), pos: new_pos.clone() });
-                    }
-                }
-                None
-            }
-
             let player_id = world.player_id();
   
             if is_key_pressed(KeyCode::A) {
                 if let Some(move_action) =
-                    move_by(&world, &player_id, -1, 0, true) {
+                    world::move_by(&world, &player_id, -1, 0, true) {
                         actions.push(move_action);
                         // TODO: action::end_turn()
                     }
@@ -416,7 +396,7 @@ async fn main() {
 
             if is_key_pressed(KeyCode::W) {
                 if let Some(move_action) =
-                    move_by(&world, &player_id, 0, -1, true) {
+                    world::move_by(&world, &player_id, 0, -1, true) {
                         actions.push(move_action);
                         // TODO: action::end_turn()
                     }
@@ -424,7 +404,7 @@ async fn main() {
 
             if is_key_pressed(KeyCode::D) {
                 if let Some(move_action) =
-                    move_by(&world, &player_id, 1, 0, true) {
+                    world::move_by(&world, &player_id, 1, 0, true) {
                         actions.push(move_action);
                         // TODO: action::end_turn()
                     }
@@ -432,7 +412,7 @@ async fn main() {
 
             if is_key_pressed(KeyCode::S) {
                 if let Some(move_action) =
-                    move_by(&world, &player_id, 0, 1, true) {
+                    world::move_by(&world, &player_id, 0, 1, true) {
                         actions.push(move_action);
                         // TODO: action::end_turn()
                     }
