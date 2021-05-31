@@ -292,7 +292,11 @@ async fn main() {
         tileset_actors: None
     };
 
-    let mut viewport = Rectangle::from((0, 0, 20, 16));
+    let (vh, vw) = (
+        (screen_height()/(height as f32)) as i32,
+        (screen_width()/(width as f32)) as i32
+    );
+    let mut viewport = Rectangle::from((0, 0, vw, vh));
     let border_size = Point::from((2, 2));
     
     // the World contains the actual game data
@@ -475,7 +479,8 @@ async fn main() {
             true => gl_use_material(material_bw)
         };
 
-        let base = vec2(10.0, 70.0);
+        //let base = vec2(10.0, 70.0);
+        let base = vec2(0.0, 0.0);
         let mut map_size = vec2(0.0, 0.0);
         let texture = main_map_target.texture;
         map_size = vec2(texture.width(), texture.height());
@@ -511,22 +516,25 @@ async fn main() {
         gl_use_default_material();
 
         // draw text with shadow
-        let mut params2 = params.clone();
-        params2.color = LIGHTGRAY;
+        if false {
+            let mut params2 = params.clone();
+            params2.color = LIGHTGRAY;
 
-        draw_text_ex(
-            "Reveal - Mystic Land of Magic and Adventure", title_x+1.0, title_y+1.0, params2
-        );
+            draw_text_ex(
+                "Reveal - Mystic Land of Magic and Adventure", title_x+1.0, title_y+1.0, params2
+            );
 
-        draw_text_ex(
-            "Reveal - Mystic Land of Magic and Adventure", title_x, title_y, params
-        );
+            draw_text_ex(
+                "Reveal - Mystic Land of Magic and Adventure", title_x, title_y, params
+            );
+        }
 
         // display status information
         if let Some(player) = world.actors.get(&world.player_id()) {
             // actor position
             let text = format!("{}, {}", player.pos.x, player.pos.y);
-            let pos = base + Vec2::from((0.0, map_size.y + 24.0 + 10.0));
+            let pos = vec2(20.0, screen_height() - 24.0 - 20.0);
+            //let pos = base + Vec2::from((0.0, map_size.y + 24.0 + 10.0));
             draw_text_ex(&text, pos.x, pos.y, params_info);
 
             // names of items at spot
