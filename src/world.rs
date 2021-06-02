@@ -169,3 +169,17 @@ pub fn move_by(world: &World, actor_id: &ActorId, dx: i32, dy: i32, follow: bool
     }
     None
 }
+
+pub fn pick_up_items(world: &World, actor_id: &ActorId, pos: Point) -> Action
+{
+    let actor = world.actors.get(&actor_id).unwrap();
+                    
+    println!("actor picks something up at {:?}", pos);
+    let items = world.items.iter()
+        .filter(|(_, item)| item.pos.is_some())
+        .filter(|(_, item)| item.pos.unwrap() == pos)
+        .map(|(id, _)| id.clone())
+        .collect::<Vec<_>>();
+
+    return Action::PickUp { actor_id: actor_id.clone(), items };
+}

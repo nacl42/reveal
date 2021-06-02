@@ -211,6 +211,119 @@ fn render_map(target: &mut RenderTarget,
     set_default_camera();
 }
 
+
+fn read_input(world: &World) -> Vec<Action> {
+
+    let mut actions = Vec::<Action>::new();
+
+    let mut viewport = Rectangle::from((0, 0, 16, 10));
+    let border_size = Point::from((2, 2));
+    
+    // Q => quit
+    if is_key_down(KeyCode::Q) {
+        println!("GOODBYE");
+        actions.push(Action::Quit);
+    }
+
+    // I => inventory
+    if is_key_pressed(KeyCode::I) {
+        println!("Inventory:");
+        if let Some(player) = world.actors.get(&world.player_id()) {
+            for (n, item_id) in player.inventory.iter().enumerate() {
+                if let Some(item) = world.items.get(item_id) {
+                    println!("{} - {}", n, item.description());
+                }
+            }
+        }
+    }
+
+    // B => switch black/white and color mode
+    if is_key_pressed(KeyCode::B) {
+        println!("switching color vision");
+        actions.push(Action::TestBW);
+    }
+
+    // arrows keys => scroll map
+    if is_key_down(KeyCode::Up) {
+        actions.push(Action::MoveViewport{ dx: 0, dy: -1 });
+    }
+
+    if is_key_down(KeyCode::Left) {
+        actions.push(Action::MoveViewport{ dx: -1, dy: 0 });
+    }
+
+    if is_key_down(KeyCode::Right) {
+        actions.push(Action::MoveViewport{ dx: 1, dy: 0 });
+    }
+
+    if is_key_down(KeyCode::Down) {
+        actions.push(Action::MoveViewport{ dx: 0, dy: 1 });
+    }
+
+    // C => Center Viewport
+    if is_key_pressed(KeyCode::C) {
+        actions.push(Action::CenterViewport);
+    }
+            
+    // ASDW => move player
+    let player_id = world.player_id();
+  
+    if is_key_pressed(KeyCode::A) {
+        if let Some(move_action) =
+            world::move_by(&world, &player_id, -1, 0, true) {
+                actions.push(move_action);
+                // TODO: action::end_turn()
+            }
+    }
+    
+    if is_key_pressed(KeyCode::W) {
+        if let Some(move_action) =
+            world::move_by(&world, &player_id, 0, -1, true) {
+                actions.push(move_action);
+                // TODO: action::end_turn()
+            }
+    }
+
+    if is_key_pressed(KeyCode::D) {
+        if let Some(move_action) =
+            world::move_by(&world, &player_id, 1, 0, true) {
+                actions.push(move_action);
+                // TODO: action::end_turn()
+            }
+    }
+    
+    if is_key_pressed(KeyCode::S) {
+        if let Some(move_action) =
+            world::move_by(&world, &player_id, 0, 1, true) {
+                actions.push(move_action);
+                // TODO: action::end_turn()
+            }
+    }
+
+        // T => show off text effect
+        // AGAIN:
+    // if is_key_pressed(KeyCode::T) {
+    //     if effects.len() == 0 {
+    //         effects.push(Box::new(ScaleText::new()));
+    //     }
+    // }
+
+    // P => pick up items
+    if is_key_pressed(KeyCode::P) {
+        let player_id = world.player_id();
+        if let Some(player) = world.actors.get(&player_id) {
+            let items = world.item_ids_at(&player.pos);
+            actions.push(Action::PickUp {
+                actor_id: player_id,
+                items
+            });
+        };
+    }
+
+    actions
+}
+
+
 #[macroquad::main(window_conf)]
 async fn main() {
     println!("You are in a cave and there is no light.");
@@ -223,7 +336,7 @@ async fn main() {
     println!("...and of course <up>, <down>, <left>, <right> to move the map!");
     
     // load assets
-    let font = load_ttf_font("assets/DejaVuSerif.ttf").await.unwrap();
+    let font = load_ttf_font("assets/DejaVuSerif.ttf").await;
     let mut params = TextParams {
         font,
         font_size: 24,
@@ -251,14 +364,11 @@ async fn main() {
         Default::default()
     ).unwrap();
 
-    let mut is_bw = false;
 
     // the map render target will be initialised in the main loop
     let mut main_map_target = render_target(0, 0);
     let mut mini_map_target = render_target(0, 0);
     
-    // sample text effect (proof of concept)
-    let mut effects: Vec<Box<dyn TextEffect>> = vec!();
 
     let (width, height) = (32.0, 32.0);
     let pattern = Pattern::Matrix {
@@ -299,151 +409,144 @@ async fn main() {
     );
     let mut viewport = Rectangle::from((0, 0, vw, vh));
     let border_size = Point::from((2, 2));
-    
+
+    //effects: Vec<Box<dyn TextEffect>>,
+
     // the World contains the actual game data
     // all of the above will be moved into the World, one by one
     let mut world = World::new();
     world.populate_world();
 
     // main loop
-    let mut last_update = get_time();
     const DELTA: f64 = 0.01;
     let (title_x, title_y) = (10.0, 42.0);
 
+    let mut player_name: String = String::from("Sir Lancelot");
+
     let mut actions: Vec<Action> = vec!();
+
+    struct LoopData {
+        quit: bool,
+        last_input: f64,
+        is_bw: bool
+    };
+
+    let mut ld = LoopData {
+        quit: false,
+        last_input: get_time(),
+        is_bw: false
+    };
+
+    // REPL:
+    // read - read input
+    // eval - perform actions
+    // print - draw gui
     
-    loop {
-        // update, if necessary
-        if get_time() - last_update > DELTA {
-            last_update = get_time();
-            //y += 1.0;
+    while !ld.quit {
 
-            // Q => quit
-            if is_key_down(KeyCode::Q) {
-                println!("GOODBYE");
-                break;
-            }
+        // process egui events
+        let mut egui_has_focus = false;
+        egui_macroquad::ui(|egui_ctx| {
+            egui::Window::new("reveal")
+                .default_pos([screen_width(), screen_height()])
+                .resizable(false)
+                .collapsible(false)
+                .show(egui_ctx, |ui| {
+                    ui.label("Welcome to the world of mystery and unknown!");
+                    let response = ui.add(
+                        egui::TextEdit::singleline(&mut player_name)
+                            .hint_text("Enter your name here")
+                    );
+                    egui_has_focus |= response.has_focus();
 
-            // I => inventory
-            if is_key_pressed(KeyCode::I) {
-                println!("Inventory:");
-                if let Some(player) = world.actors.get(&world.player_id()) {
-                    for (n, item_id) in player.inventory.iter().enumerate() {
-                        if let Some(item) = world.items.get(item_id) {
-                            println!("{} - {}", n, item.description());
+                    ui.separator();
+                    if let Some(player) = &world.actors.get(&world.player_id()) {
+                        for item_id in &player.inventory {
+                            if let Some(item) = &world.items.get(&item_id) {
+                                ui.label(item.description());
+                            }
                         }
                     }
-                }
-            }
+                });
+        });
 
-            // B => switch black/white and color mode
-            if is_key_pressed(KeyCode::B) {
-                println!("switching color vision");
-                is_bw = !is_bw;
-            }
+        // update, if necessary
+        if !egui_has_focus && (get_time() - ld.last_input > DELTA) {
+            ld.last_input = get_time();
+            actions.extend(read_input(&world));
+        }
 
-            // arrows keys => scroll map
-            if is_key_down(KeyCode::Up) {
-                if viewport.y1 > 0 {
-                    viewport.y1 -= 1;
-                    viewport.y2 -= 1;
-                }
-            }
+        // update and apply effects
+        // AGAIN:
+        // effects.iter_mut().for_each(|e| e.step());
+        // effects.retain(|e| e.is_alive());
+        // effects.iter().for_each(|e| e.apply(&mut params));
 
-            if is_key_down(KeyCode::Left) {
-                if viewport.x1 > 0 {
-                    viewport.x1 -= 1;
-                    viewport.x2 -= 1;
-                }
-            }
-
-            if is_key_down(KeyCode::Right) {
-                viewport.x1 += 1;
-                viewport.x2 += 1;
-            }
-
-            if is_key_down(KeyCode::Down) {
-                viewport.y1 += 1;
-                viewport.y2 += 1;
-            }
-
-            // C => Center Viewport
-            if is_key_pressed(KeyCode::C) {
-                adjust_viewport(
-                    &mut viewport,
-                    &border_size,
-                    &world.player_pos(),
-                    ViewportMode::Center
-                );
-            }
-            
-            // ASDW => move player
-            let player_id = world.player_id();
-  
-            if is_key_pressed(KeyCode::A) {
-                if let Some(move_action) =
-                    world::move_by(&world, &player_id, -1, 0, true) {
-                        actions.push(move_action);
-                        // TODO: action::end_turn()
+        // process game actions
+        while actions.len() > 0 {
+            match actions.pop().unwrap() {
+                Action::Quit => {
+                    ld.quit = true;
+                },
+                Action::Move {actor_id, pos} => {
+                    if let Some(player) = world.actors.get_mut(&actor_id) {
+                        player.pos = pos;
                     }
-            }
-
-            if is_key_pressed(KeyCode::W) {
-                if let Some(move_action) =
-                    world::move_by(&world, &player_id, 0, -1, true) {
-                        actions.push(move_action);
-                        // TODO: action::end_turn()
+                    // TODO: update map
+                },
+                Action::MoveFollow {actor_id, pos, mode} => {
+                    if let Some(player) = world.actors.get_mut(&actor_id) {
+                        player.pos = pos;
+                        adjust_viewport(
+                            &mut viewport,
+                            &border_size,
+                            &player.pos,
+                            mode
+                        )
                     }
-            }
-
-            if is_key_pressed(KeyCode::D) {
-                if let Some(move_action) =
-                    world::move_by(&world, &player_id, 1, 0, true) {
-                        actions.push(move_action);
-                        // TODO: action::end_turn()
-                    }
-            }
-
-            if is_key_pressed(KeyCode::S) {
-                if let Some(move_action) =
-                    world::move_by(&world, &player_id, 0, 1, true) {
-                        actions.push(move_action);
-                        // TODO: action::end_turn()
-                    }
-            }
-
-            let actors = &mut world.actors;
-            
-            // T => show off text effect
-            if is_key_pressed(KeyCode::T) {
-                if effects.len() == 0 {
-                    effects.push(Box::new(ScaleText::new()));
-                }
-            }
-
-            // P => pick up items
-            if is_key_pressed(KeyCode::P) {
-                let player_id = world.player_id();
-                if let Some(player) = world.actors.get(&player_id) {
-                    for id in &world.item_ids_at(&player.pos) {
-                        let item = world.items.get_mut(&id).unwrap();
-                        println!("picking up {}", item.description());
-                        item.owner = Some(player_id);
-                        item.pos = None;
-                        world.actors.get_mut(&player_id).unwrap()
-                            .inventory.push(*id);
+                },
+                Action::PickUp { actor_id, items } => {
+                    for item_id in items {
+                        // remove object position and set owner to 0
+                        if let Some(item) = world.items.get_mut(&item_id) {
+                            println!("picking up {}", item.description());
+                            item.owner = Some(actor_id);
+                            item.pos = None;
+                            world.actors.get_mut(&actor_id).unwrap()
+                                .inventory.push(item_id.clone());
+                        }                    
                     }                    
+                },
+                Action::TestBW => {
+                    ld.is_bw = !ld.is_bw;
+                },
+                Action::MoveViewport { dx, dy } => {
+                    if dy != 0 {
+                        //if viewport.y1 + dy > 0 {
+                            viewport.y1 += dy;
+                            viewport.y2 += dy;
+                        //}
+                    };
+
+                    if dx != 0 {
+                        //if viewport.x1 + dx > 0 {
+                            viewport.x1 += dx;
+                            viewport.x2 += dx;
+                        //}
+                    }
+                },
+                Action::CenterViewport => {
+                    adjust_viewport(
+                        &mut viewport,
+                        &border_size,
+                        &world.player_pos(),
+                        ViewportMode::Center
+                    );
                 }
             }
         }
 
-        // update and apply effects
-        effects.iter_mut().for_each(|e| e.step());
-        effects.retain(|e| e.is_alive());
-        //println!("#effects = {}", effects.len());
-        effects.iter().for_each(|e| e.apply(&mut params));
-
-        // redraw
+        // draw
         clear_background(BLACK);
 
         // --- map drawing --
@@ -455,16 +558,8 @@ async fn main() {
             &main_map_render_assets
         );
 
-        render_map(
-            &mut mini_map_target,
-            &world,
-            viewport.x1, viewport.y1,
-            64,40,
-            &mini_map_render_assets
-        );
-
         // select material (this is just a toy function for testing)
-        match is_bw {
+        match ld.is_bw {
             false => gl_use_material(material_vignette),
             true => gl_use_material(material_bw)
         };
@@ -488,10 +583,20 @@ async fn main() {
         );
 
         // draw mini map
+        
+        render_map(
+            &mut mini_map_target,
+            &world,
+            viewport.x1, viewport.y1,
+            48,20,
+            &mini_map_render_assets
+        );
+
         let texture = mini_map_target.texture;
         let topleft = base + vec2(
-            screen_width() - mini_map_target.texture.width() - 20.0,
-            screen_height() - mini_map_target.texture.height() - 20.0
+            screen_width() - mini_map_target.texture.width() - 10.0,
+            10.0
+            //screen_height() - mini_map_target.texture.height() - 20.0
         );
         let mini_map_size = vec2(texture.width(), texture.height());
         draw_texture_ex(
@@ -544,28 +649,7 @@ async fn main() {
             }
         }
 
-        // process game actions
-        while actions.len() > 0 {
-            match actions.pop().unwrap() {
-                Action::Move {actor_id, pos} => {
-                    if let Some(player) = world.actors.get_mut(&actor_id) {
-                        player.pos = pos;
-                    }
-                    // TODO: update map
-                },
-                Action::MoveFollow {actor_id, pos, mode} => {
-                    if let Some(player) = world.actors.get_mut(&actor_id) {
-                        player.pos = pos;
-                        adjust_viewport(
-                            &mut viewport,
-                            &border_size,
-                            &player.pos,
-                            mode
-                        )
-                    }
-                }
-            }
-        }
+        egui_macroquad::draw();
         
         next_frame().await
     }
