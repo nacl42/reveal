@@ -226,6 +226,11 @@ fn read_input(world: &World) -> Vec<Action> {
         actions.push(Action::Quit);
     }
 
+    // U => switch player status window
+    if is_key_pressed(KeyCode::U) {
+        actions.push(Action::GUI(GuiAction::HideShowStatus));
+    }
+    
     // B => switch black/white and color mode
     if is_key_pressed(KeyCode::B) {
         println!("switching color vision");
@@ -340,6 +345,7 @@ async fn main() {
     println!("Move player with <A>, <S>, <D>, <W>.");
     println!("Center map on player using <C>!");
     println!("List inventory with <I>, pick up items with <P>.");
+    println!("Show/hide help window with <H>, show/hide status window with <U>");
     println!("...and of course <up>, <down>, <left>, <right> to move the map!");
 
     // TODO: parse command line arguments, e.g. --fullscreen
@@ -439,6 +445,7 @@ async fn main() {
         is_bw: bool,
         show_inventory: bool,
         show_help: bool,
+        show_status: bool,
         viewport: Rectangle,
         border_size: Point,
         messages: VecDeque<String>
@@ -451,6 +458,7 @@ async fn main() {
         is_bw: false,
         show_inventory: true,
         show_help: true,
+        show_status: true,
         viewport: Rectangle::from((0, 0, vw, vh)),
         border_size: Point::from((10, 10)),
         messages: VecDeque::new()
@@ -476,6 +484,21 @@ async fn main() {
         let mut egui_has_focus = false;
         egui_macroquad::ui(|egui_ctx| {
 
+            // status window
+            if ld.show_status {
+                egui::Window::new("player")
+                    .default_pos([0.0, screen_height()])
+                    .resizable(false)
+                    .collapsible(false)
+                    .show(egui_ctx, |ui| {
+                        // actor position
+                        if let Some(player) = world.actors.get(&world.player_id()) {
+                            ui.label(format!("position: {}, {}", player.pos.x, player.pos.y));
+                        }
+                    });
+            };
+            
+            // help window
             if ld.show_help {
                 egui::Window::new("help")
                     .default_pos([screen_width(), 0.0])
@@ -488,6 +511,7 @@ async fn main() {
                         ui.label("c - center viewport");
                         ui.label("arrow keys - move viewport");
                         ui.label("h - show/hide help");
+                        ui.label("s - show/hide status");
                         ui.label("q - quit");
                     });
             };
@@ -617,6 +641,9 @@ async fn main() {
                 Action::GUI(GuiAction::HideShowHelp) => {
                     ld.show_help = !ld.show_help;
                 },
+                Action::GUI(GuiAction::HideShowStatus) => {
+                    ld.show_status = !ld.show_status;
+                }
             }
         }
 
@@ -700,13 +727,7 @@ async fn main() {
 
         // display status information
         if let Some(player) = world.actors.get(&world.player_id()) {
-
-            // actor position
-            let text = format!("{}, {}", player.pos.x, player.pos.y);
             let pos = vec2(20.0, screen_height() - 24.0 - 20.0);
-            //let pos = base + Vec2::from((0.0, map_size.y + 24.0 + 10.0));
-            draw_text_ex(&text, pos.x, pos.y, params_info);
-
             // names of items at spot
             let ids = world.item_ids_at(&player.pos);
             let names = ids.iter()

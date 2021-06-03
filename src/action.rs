@@ -21,5 +21,6 @@ pub enum Action {
 pub enum GuiAction {
     TestBW,
     HideShowInventory,
-    HideShowHelp
+    HideShowHelp,
+    HideShowStatus
 }
