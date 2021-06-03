@@ -26,6 +26,8 @@ const CRT_FRAGMENT_SHADER: &'static str = include_str!("shaders/vignette_fragmen
 const CRT_VERTEX_SHADER: &'static str = include_str!("shaders/vignette_vertex.glsl");
 const BW_FRAGMENT_SHADER: &'static str = include_str!("shaders/bw_fragment.glsl");
 
+const DELTA_UPDATE: f64 = 0.01;
+const DELTA_TURN: f64 = 0.1;
 
 fn window_conf() -> Conf {
     Conf {
@@ -216,9 +218,6 @@ fn read_input(world: &World) -> Vec<Action> {
 
     let mut actions = Vec::<Action>::new();
 
-    let mut viewport = Rectangle::from((0, 0, 16, 10));
-    let border_size = Point::from((4, 4));
-    
     // Q => quit
     if is_key_down(KeyCode::Q) {
         println!("GOODBYE");
@@ -405,12 +404,6 @@ async fn main() {
         tileset_actors: None
     };
 
-    let (vh, vw) = (
-        (screen_height()/(height as f32)) as i32,
-        (screen_width()/(width as f32)) as i32
-    );
-    let mut viewport = Rectangle::from((0, 0, vw, vh));
-    let border_size = Point::from((4, 4));
 
     //effects: Vec<Box<dyn TextEffect>>,
 
@@ -420,13 +413,16 @@ async fn main() {
     world.populate_world();
 
     // main loop
-    const DELTA_UPDATE: f64 = 0.01;
-    const DELTA_TURN: f64 = 0.1;
     let (title_x, title_y) = (10.0, 42.0);
 
     let mut player_name: String = String::from("Sir Lancelot");
 
     let mut actions: Vec<Action> = vec!();
+
+    let (vh, vw) = (
+        (screen_height()/(height as f32)) as i32,
+        (screen_width()/(width as f32)) as i32
+    );
 
     struct LoopData {
         quit: bool,
@@ -434,7 +430,9 @@ async fn main() {
         end_of_turn: f64,
         is_bw: bool,
         show_inventory: bool,
-        show_help: bool            
+        show_help: bool,
+        viewport: Rectangle,
+        border_size: Point
     };
 
     let mut ld = LoopData {
@@ -443,7 +441,9 @@ async fn main() {
         end_of_turn: 0.0,
         is_bw: false,
         show_inventory: true,
-        show_help: true
+        show_help: true,
+        viewport: Rectangle::from((0, 0, vw, vh)),
+        border_size: Point::from((10, 10))
     };
 
     // REPL:
@@ -533,8 +533,8 @@ async fn main() {
                     if let Some(player) = world.actors.get_mut(&actor_id) {
                         player.pos = pos;
                         adjust_viewport(
-                            &mut viewport,
-                            &border_size,
+                            &mut ld.viewport,
+                            &ld.border_size,
                             &player.pos,
                             mode
                         )
@@ -555,22 +555,22 @@ async fn main() {
                 Action::MoveViewport { dx, dy } => {
                     if dy != 0 {
                         //if viewport.y1 + dy > 0 {
-                            viewport.y1 += dy;
-                            viewport.y2 += dy;
+                            ld.viewport.y1 += dy;
+                            ld.viewport.y2 += dy;
                         //}
                     };
 
                     if dx != 0 {
                         //if viewport.x1 + dx > 0 {
-                            viewport.x1 += dx;
-                            viewport.x2 += dx;
+                            ld.viewport.x1 += dx;
+                            ld.viewport.x2 += dx;
                         //}
                     }
                 },
                 Action::CenterViewport => {
                     adjust_viewport(
-                        &mut viewport,
-                        &border_size,
+                        &mut ld.viewport,
+                        &ld.border_size,
                         &world.player_pos(),
                         ViewportMode::Center
                     );
@@ -602,8 +602,8 @@ async fn main() {
         render_map(
             &mut main_map_target,
             &world,
-            viewport.x1, viewport.y1,
-            viewport.width(), viewport.height(),
+            ld.viewport.x1, ld.viewport.y1,
+            ld.viewport.width(), ld.viewport.height(),
             &main_map_render_assets
         );
 
@@ -636,7 +636,7 @@ async fn main() {
         render_map(
             &mut mini_map_target,
             &world,
-            viewport.x1, viewport.y1,
+            ld.viewport.x1, ld.viewport.y1,
             48,20,
             &mini_map_render_assets
         );
