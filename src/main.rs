@@ -22,6 +22,8 @@ use world::{World, ViewportMode, adjust_viewport};
 use item::Item;
 use action::Action;
 
+use std::collections::VecDeque;
+
 const CRT_FRAGMENT_SHADER: &'static str = include_str!("shaders/vignette_fragment.glsl");
 const CRT_VERTEX_SHADER: &'static str = include_str!("shaders/vignette_vertex.glsl");
 const BW_FRAGMENT_SHADER: &'static str = include_str!("shaders/bw_fragment.glsl");
@@ -34,7 +36,7 @@ fn window_conf() -> Conf {
         window_title: "Reveal".to_owned(),
         window_width: 1024,
         window_height: 800,
-        fullscreen: true,
+        //fullscreen: true,
         ..Default::default()
     }
 }
@@ -260,7 +262,8 @@ fn read_input(world: &World) -> Vec<Action> {
             world::move_by(&world, &player_id, -1, 0, true) {
                 actions.push(move_action);
                 actions.push(Action::EndTurn);
-                // TODO: action::end_turn()
+            } else {
+                actions.push(Action::Ouch);
             }
     }
     
@@ -269,7 +272,8 @@ fn read_input(world: &World) -> Vec<Action> {
             world::move_by(&world, &player_id, 0, -1, true) {
                 actions.push(move_action);
                 actions.push(Action::EndTurn);
-                // TODO: action::end_turn()
+            } else {
+                actions.push(Action::Ouch);
             }
     }
 
@@ -278,7 +282,8 @@ fn read_input(world: &World) -> Vec<Action> {
             world::move_by(&world, &player_id, 1, 0, true) {
                 actions.push(move_action);
                 actions.push(Action::EndTurn);
-                // TODO: action::end_turn()
+            } else {
+                actions.push(Action::Ouch);
             }
     }
     
@@ -287,7 +292,8 @@ fn read_input(world: &World) -> Vec<Action> {
             world::move_by(&world, &player_id, 0, 1, true) {
                 actions.push(move_action);
                 actions.push(Action::EndTurn);
-                // TODO: action::end_turn()
+            } else {
+                actions.push(Action::Ouch);
             }
     }
 
@@ -335,6 +341,8 @@ async fn main() {
     println!("Center map on player using <C>!");
     println!("List inventory with <I>, pick up items with <P>.");
     println!("...and of course <up>, <down>, <left>, <right> to move the map!");
+
+    // TODO: parse command line arguments, e.g. --fullscreen
     
     // load assets
     let font = load_ttf_font("assets/DejaVuSerif.ttf").await;
@@ -418,7 +426,7 @@ async fn main() {
     let mut player_name: String = String::from("Sir Lancelot");
 
     let mut actions: Vec<Action> = vec!();
-
+    
     let (vh, vw) = (
         (screen_height()/(height as f32)) as i32,
         (screen_width()/(width as f32)) as i32
@@ -432,7 +440,8 @@ async fn main() {
         show_inventory: bool,
         show_help: bool,
         viewport: Rectangle,
-        border_size: Point
+        border_size: Point,
+        messages: VecDeque<String>
     };
 
     let mut ld = LoopData {
@@ -443,8 +452,11 @@ async fn main() {
         show_inventory: true,
         show_help: true,
         viewport: Rectangle::from((0, 0, vw, vh)),
-        border_size: Point::from((10, 10))
+        border_size: Point::from((10, 10)),
+        messages: VecDeque::new()
     };
+
+    ld.messages.push_front("Welcome to the Land of Mystery...".into());
 
     // REPL:
     // read - read input
@@ -522,7 +534,11 @@ async fn main() {
                 Action::EndTurn => {
                     // TODO: change game time
                     ld.end_of_turn = get_time();
-                }
+                },
+                Action::Ouch => {
+                    ld.messages.push_front("Ouch!".into());
+                    ld.end_of_turn = get_time();
+                },
                 Action::Move {actor_id, pos} => {
                     if let Some(player) = world.actors.get_mut(&actor_id) {
                         player.pos = pos;
@@ -544,7 +560,9 @@ async fn main() {
                     for item_id in items {
                         // remove object position and set owner to 0
                         if let Some(item) = world.items.get_mut(&item_id) {
-                            println!("picking up {}", item.description());
+                            ld.messages.push_front(
+                                format!("You pick up {}.", item.description())
+                            );
                             item.owner = Some(actor_id);
                             item.pos = None;
                             world.actors.get_mut(&actor_id).unwrap()
@@ -591,7 +609,7 @@ async fn main() {
                 },
                 Action::HideShowHelp => {
                     ld.show_help = !ld.show_help;
-                }
+                },
             }
         }
 
@@ -675,6 +693,7 @@ async fn main() {
 
         // display status information
         if let Some(player) = world.actors.get(&world.player_id()) {
+
             // actor position
             let text = format!("{}, {}", player.pos.x, player.pos.y);
             let pos = vec2(20.0, screen_height() - 24.0 - 20.0);
@@ -697,6 +716,23 @@ async fn main() {
                 draw_text_ex(&text, pos.x, pos.y, params_info);
             }
         }
+
+        // display messages
+        let max_messages = 5;
+        //let mut pos = vec2(20.0, screen_height() - 20.0);
+        let mut pos = vec2(20.0, 20.0);
+        let mut msg_params = params_info.clone();
+        for message in ld.messages.iter().take(max_messages) {
+            draw_text_ex(&message, pos.x, pos.y, msg_params);
+            // move one line below (with some spacing)
+            pos.y += (1.1 * msg_params.font_size as f32);
+            // blend out color
+            msg_params.color.a *= 0.7; 
+        };
+
+        // flush very old messages
+        ld.messages.truncate(10);
+        
 
         egui_macroquad::draw();
         
