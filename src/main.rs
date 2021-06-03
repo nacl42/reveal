@@ -217,24 +217,12 @@ fn read_input(world: &World) -> Vec<Action> {
     let mut actions = Vec::<Action>::new();
 
     let mut viewport = Rectangle::from((0, 0, 16, 10));
-    let border_size = Point::from((2, 2));
+    let border_size = Point::from((4, 4));
     
     // Q => quit
     if is_key_down(KeyCode::Q) {
         println!("GOODBYE");
         actions.push(Action::Quit);
-    }
-
-    // I => inventory
-    if is_key_pressed(KeyCode::I) {
-        println!("Inventory:");
-        if let Some(player) = world.actors.get(&world.player_id()) {
-            for (n, item_id) in player.inventory.iter().enumerate() {
-                if let Some(item) = world.items.get(item_id) {
-                    println!("{} - {}", n, item.description());
-                }
-            }
-        }
     }
 
     // B => switch black/white and color mode
@@ -300,6 +288,16 @@ fn read_input(world: &World) -> Vec<Action> {
             }
     }
 
+    // I => hide/show inventory
+    if is_key_pressed(KeyCode::I) {
+        actions.push(Action::HideShowInventory);
+    }
+
+    // H => hide/show help
+    if is_key_pressed(KeyCode::H) {
+        actions.push(Action::HideShowHelp);
+    }
+    
         // T => show off text effect
         // AGAIN:
     // if is_key_pressed(KeyCode::T) {
@@ -408,7 +406,7 @@ async fn main() {
         (screen_width()/(width as f32)) as i32
     );
     let mut viewport = Rectangle::from((0, 0, vw, vh));
-    let border_size = Point::from((2, 2));
+    let border_size = Point::from((4, 4));
 
     //effects: Vec<Box<dyn TextEffect>>,
 
@@ -428,13 +426,17 @@ async fn main() {
     struct LoopData {
         quit: bool,
         last_input: f64,
-        is_bw: bool
+        is_bw: bool,
+        show_inventory: bool,
+        show_help: bool            
     };
 
     let mut ld = LoopData {
         quit: false,
         last_input: get_time(),
-        is_bw: false
+        is_bw: false,
+        show_inventory: true,
+        show_help: true
     };
 
     // REPL:
@@ -447,27 +449,46 @@ async fn main() {
         // process egui events
         let mut egui_has_focus = false;
         egui_macroquad::ui(|egui_ctx| {
-            egui::Window::new("reveal")
-                .default_pos([screen_width(), screen_height()])
-                .resizable(false)
-                .collapsible(false)
-                .show(egui_ctx, |ui| {
-                    ui.label("Welcome to the world of mystery and unknown!");
-                    let response = ui.add(
-                        egui::TextEdit::singleline(&mut player_name)
-                            .hint_text("Enter your name here")
-                    );
-                    egui_has_focus |= response.has_focus();
 
-                    ui.separator();
-                    if let Some(player) = &world.actors.get(&world.player_id()) {
-                        for item_id in &player.inventory {
-                            if let Some(item) = &world.items.get(&item_id) {
-                                ui.label(item.description());
+            if ld.show_help {
+                egui::Window::new("help")
+                    .default_pos([screen_width(), 0.0])
+                    .resizable(false)
+                    .collapsible(false)
+                    .show(egui_ctx, |ui| {
+                        ui.label("a,s,d,w - move around");
+                        ui.label("i - show/hide inventory");
+                        ui.label("p - pick up items");
+                        ui.label("c - center viewport");
+                        ui.label("arrow keys - move viewport");
+                        ui.label("h - show/hide help");
+                        ui.label("q - quit");
+                    });
+            };
+            
+            if ld.show_inventory {
+                egui::Window::new("inventory")
+                    .default_pos([screen_width(), screen_height()])
+                    .resizable(false)
+                    .collapsible(false)
+                    .show(egui_ctx, |ui| {
+                        ui.label("You carry the following items:");
+                        // let response = ui.add(
+                        //     egui::TextEdit::singleline(&mut player_name)
+                        //         .hint_text("Enter your name here")
+                        // );
+                        // egui_has_focus |= response.has_focus();
+
+                        ui.separator();
+                        if let Some(player) = &world.actors.get(&world.player_id()) {
+                            for (n, item_id) in player.inventory.iter().enumerate() {
+                                if let Some(item) = &world.items.get(&item_id) {
+                                    ui.label(format!("{n} - {text}", n=n+1, text=item.description()));
+                                }
                             }
                         }
-                    }
-                });
+                    });
+            }
         });
 
         // update, if necessary
@@ -517,9 +538,6 @@ async fn main() {
                         }                    
                     }                    
                 },
-                Action::TestBW => {
-                    ld.is_bw = !ld.is_bw;
-                },
                 Action::MoveViewport { dx, dy } => {
                     if dy != 0 {
                         //if viewport.y1 + dy > 0 {
@@ -542,6 +560,23 @@ async fn main() {
                         &world.player_pos(),
                         ViewportMode::Center
                     );
+                },
+                Action::TestBW => {
+                    ld.is_bw = !ld.is_bw;
+                },
+                Action::HideShowInventory => {
+                    ld.show_inventory = !ld.show_inventory;
+                    println!("Inventory:");
+                    if let Some(player) = world.actors.get(&world.player_id()) {
+                        for (n, item_id) in player.inventory.iter().enumerate() {
+                            if let Some(item) = world.items.get(item_id) {
+                                println!("{} - {}", n, item.description());
+                            }
+                        }
+                    }
+                },
+                Action::HideShowHelp => {
+                    ld.show_help = !ld.show_help;
                 }
             }
         }

@@ -10,8 +10,10 @@ pub enum Action {
     Move { actor_id: ActorId, pos: Point },
     PickUp { actor_id: ActorId, items: Vec<ItemId> },
     Quit,
-    TestBW,
     MoveViewport { dx: i32, dy: i32 },
-    CenterViewport
+    CenterViewport,
+    TestBW,
+    HideShowInventory,
+    HideShowHelp
 }
 
