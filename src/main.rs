@@ -32,7 +32,7 @@ fn window_conf() -> Conf {
         window_title: "Reveal".to_owned(),
         window_width: 1024,
         window_height: 800,
-        //fullscreen: true,
+        fullscreen: true,
         ..Default::default()
     }
 }
@@ -256,34 +256,38 @@ fn read_input(world: &World) -> Vec<Action> {
     // ASDW => move player
     let player_id = world.player_id();
   
-    if is_key_pressed(KeyCode::A) {
+    if is_key_down(KeyCode::A) {
         if let Some(move_action) =
             world::move_by(&world, &player_id, -1, 0, true) {
                 actions.push(move_action);
+                actions.push(Action::EndTurn);
                 // TODO: action::end_turn()
             }
     }
     
-    if is_key_pressed(KeyCode::W) {
+    if is_key_down(KeyCode::W) {
         if let Some(move_action) =
             world::move_by(&world, &player_id, 0, -1, true) {
                 actions.push(move_action);
+                actions.push(Action::EndTurn);
                 // TODO: action::end_turn()
             }
     }
 
-    if is_key_pressed(KeyCode::D) {
+    if is_key_down(KeyCode::D) {
         if let Some(move_action) =
             world::move_by(&world, &player_id, 1, 0, true) {
                 actions.push(move_action);
+                actions.push(Action::EndTurn);
                 // TODO: action::end_turn()
             }
     }
     
-    if is_key_pressed(KeyCode::S) {
+    if is_key_down(KeyCode::S) {
         if let Some(move_action) =
             world::move_by(&world, &player_id, 0, 1, true) {
                 actions.push(move_action);
+                actions.push(Action::EndTurn);
                 // TODO: action::end_turn()
             }
     }
@@ -416,7 +420,8 @@ async fn main() {
     world.populate_world();
 
     // main loop
-    const DELTA: f64 = 0.01;
+    const DELTA_UPDATE: f64 = 0.01;
+    const DELTA_TURN: f64 = 0.1;
     let (title_x, title_y) = (10.0, 42.0);
 
     let mut player_name: String = String::from("Sir Lancelot");
@@ -426,6 +431,7 @@ async fn main() {
     struct LoopData {
         quit: bool,
         last_input: f64,
+        end_of_turn: f64,
         is_bw: bool,
         show_inventory: bool,
         show_help: bool            
@@ -434,6 +440,7 @@ async fn main() {
     let mut ld = LoopData {
         quit: false,
         last_input: get_time(),
+        end_of_turn: 0.0,
         is_bw: false,
         show_inventory: true,
         show_help: true
@@ -492,7 +499,10 @@ async fn main() {
         });
 
         // update, if necessary
-        if !egui_has_focus && (get_time() - ld.last_input > DELTA) {
+        if !egui_has_focus
+            && (get_time() - ld.last_input > DELTA_UPDATE)
+            && (get_time() - ld.end_of_turn > DELTA_TURN)
+        {
             ld.last_input = get_time();
             actions.extend(read_input(&world));
         }
@@ -509,6 +519,10 @@ async fn main() {
                 Action::Quit => {
                     ld.quit = true;
                 },
+                Action::EndTurn => {
+                    // TODO: change game time
+                    ld.end_of_turn = get_time();
+                }
                 Action::Move {actor_id, pos} => {
                     if let Some(player) = world.actors.get_mut(&actor_id) {
                         player.pos = pos;
