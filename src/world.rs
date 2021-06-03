@@ -14,6 +14,7 @@ pub struct World {
     pub items: ItemMap,
     pub terrain: TerrainMap,
     player_id: ActorId,
+    pub time: i32,
     //pub tiles: TileMap
 }
 
@@ -28,6 +29,7 @@ impl World {
             items: ItemMap::new(),
             terrain: read_terrain_from_file("assets/sample.layer").unwrap(),
             player_id,
+            time: 0
             //tiles: TileMap::new(),
         }
     }

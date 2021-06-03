@@ -36,7 +36,7 @@ fn window_conf() -> Conf {
         window_title: "Reveal".to_owned(),
         window_width: 1024,
         window_height: 800,
-        //fullscreen: true,
+        fullscreen: true,
         ..Default::default()
     }
 }
@@ -494,6 +494,7 @@ async fn main() {
                         // actor position
                         if let Some(player) = world.actors.get(&world.player_id()) {
                             ui.label(format!("position: {}, {}", player.pos.x, player.pos.y));
+                            ui.label(format!("game time: {}", world.time));
                         }
                     });
             };
@@ -563,8 +564,9 @@ async fn main() {
                     ld.quit = true;
                 },
                 Action::EndTurn => {
-                    // TODO: change game time
                     ld.end_of_turn = get_time();
+                    world.time += 1;
+                    // TODO: move NPC
                 },
                 Action::Ouch => {
                     ld.messages.push_front("Ouch!".into());
