@@ -20,7 +20,7 @@ use point::{Point, Rectangle};
 use item::{ItemKind}; //ItemId, Item, ItemKind, ItemMap};
 use world::{World, ViewportMode, adjust_viewport};
 use item::Item;
-use action::Action;
+use action::{Action, GuiAction};
 
 use std::collections::VecDeque;
 
@@ -229,7 +229,7 @@ fn read_input(world: &World) -> Vec<Action> {
     // B => switch black/white and color mode
     if is_key_pressed(KeyCode::B) {
         println!("switching color vision");
-        actions.push(Action::TestBW);
+        actions.push(Action::GUI(GuiAction::TestBW));
     }
 
     // arrows keys => scroll map
@@ -299,12 +299,12 @@ fn read_input(world: &World) -> Vec<Action> {
 
     // I => hide/show inventory
     if is_key_pressed(KeyCode::I) {
-        actions.push(Action::HideShowInventory);
+        actions.push(Action::GUI(GuiAction::HideShowInventory));
     }
 
     // H => hide/show help
     if is_key_pressed(KeyCode::H) {
-        actions.push(Action::HideShowHelp);
+        actions.push(Action::GUI(GuiAction::HideShowHelp));
     }
     
         // T => show off text effect
@@ -456,6 +456,13 @@ async fn main() {
         messages: VecDeque::new()
     };
 
+    adjust_viewport(
+        &mut ld.viewport,
+        &ld.border_size,
+        &world.player_pos(),
+        ViewportMode::Center
+    );
+
     ld.messages.push_front("Welcome to the Land of Mystery...".into());
 
     // REPL:
@@ -486,19 +493,19 @@ async fn main() {
             };
             
             if ld.show_inventory {
-                egui::Window::new("inventory")
+                egui::Window::new("You carry the following items:")
                     .default_pos([screen_width(), screen_height()])
                     .resizable(false)
                     .collapsible(false)
                     .show(egui_ctx, |ui| {
-                        ui.label("You carry the following items:");
+                        //ui.label("You carry the following items:");
                         // let response = ui.add(
                         //     egui::TextEdit::singleline(&mut player_name)
                         //         .hint_text("Enter your name here")
                         // );
                         // egui_has_focus |= response.has_focus();
 
-                        ui.separator();
+                        //ui.separator();
                         if let Some(player) = &world.actors.get(&world.player_id()) {
                             for (n, item_id) in player.inventory.iter().enumerate() {
                                 if let Some(item) = &world.items.get(&item_id) {
@@ -593,10 +600,10 @@ async fn main() {
                         ViewportMode::Center
                     );
                 },
-                Action::TestBW => {
+                Action::GUI(GuiAction::TestBW) => {
                     ld.is_bw = !ld.is_bw;
                 },
-                Action::HideShowInventory => {
+                Action::GUI(GuiAction::HideShowInventory) => {
                     ld.show_inventory = !ld.show_inventory;
                     println!("Inventory:");
                     if let Some(player) = world.actors.get(&world.player_id()) {
@@ -607,7 +614,7 @@ async fn main() {
                         }
                     }
                 },
-                Action::HideShowHelp => {
+                Action::GUI(GuiAction::HideShowHelp) => {
                     ld.show_help = !ld.show_help;
                 },
             }

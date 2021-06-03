@@ -14,8 +14,12 @@ pub enum Action {
     Quit,
     MoveViewport { dx: i32, dy: i32 },
     CenterViewport,
-    TestBW,
-    HideShowInventory,
-    HideShowHelp,
+    GUI(GuiAction)
 }
 
+#[derive(Debug)]
+pub enum GuiAction {
+    TestBW,
+    HideShowInventory,
+    HideShowHelp
+}
