@@ -216,7 +216,7 @@ fn render_map(target: &mut RenderTarget,
 }
 
 
-struct LoopData {
+struct MainState {
     quit: bool,
     last_input: f64,
     end_of_turn: f64,
@@ -227,7 +227,15 @@ struct LoopData {
     viewport: Rectangle,
     border_size: Point,
     messages: VecDeque<String>,
-    egui_has_focus: bool
+    egui_has_focus: bool,
+    material_vignette: Material,
+    material_bw: Material,
+    main_map_target: RenderTarget,
+    mini_map_target: RenderTarget,
+    params: TextParams,
+    params_info: TextParams,
+    main_map_render_assets: MapRenderAssets,
+    mini_map_render_assets: MapRenderAssets
 }
 
 
@@ -354,7 +362,7 @@ fn read_input(world: &World) -> Vec<Action> {
 
 
 /// process egui events
-fn render_and_update_egui(ld: &mut LoopData, world: &World) {
+fn render_and_update_egui(ld: &mut MainState, world: &World) {
 
     ld.egui_has_focus = false;
     
@@ -420,23 +428,106 @@ fn render_and_update_egui(ld: &mut LoopData, world: &World) {
 }
 
 
-#[macroquad::main(window_conf)]
-async fn main() {
-    println!("You are in a cave and there is no light.");
+fn render(ld: &mut MainState, world: &World) {
+    clear_background(BLACK);
 
-    println!("Press <q> to quit and <t> to scale text!");
-    println!("Try <b> to switch color vision.");
-    println!("Move player with cursor keys.");
-    println!("Scroll map with shift + cursor keys.");
-    println!("Center map on player using <C>!");
-    println!("List inventory with <I>, pick up items with <P>.");
-    println!("Show/hide help window with <H>, show/hide status window with <S>");
+    // --- map drawing --
+    render_map(
+        &mut ld.main_map_target,
+        &world,
+        ld.viewport.x1, ld.viewport.y1,
+        ld.viewport.width(), ld.viewport.height(),
+        &ld.main_map_render_assets
+    );
 
-    // TODO: parse command line arguments, e.g. --fullscreen
+    // select material (this is just a toy function for testing)
+    match ld.is_bw {
+        false => gl_use_material(ld.material_vignette),
+        true => gl_use_material(ld.material_bw)
+    };
+
+    //let base = vec2(10.0, 70.0);
+    let base = vec2(0.0, 0.0);
+    let mut map_size = vec2(0.0, 0.0);
+    let texture = ld.main_map_target.texture;
+    map_size = vec2(texture.width(), texture.height());
+
+    draw_texture_ex(
+        texture,
+        base.x,
+        base.y,
+        WHITE,
+        DrawTextureParams {
+            flip_y: true, // this is a temporary workaround
+            dest_size: Some(map_size),
+            ..Default::default()
+        }
+    );
+
+    // draw mini map
+    render_map(
+        &mut ld.mini_map_target,
+        &world,
+        ld.viewport.x1, ld.viewport.y1,
+        48,20,
+        &ld.mini_map_render_assets
+    );
+
+    let texture = ld.mini_map_target.texture;
+    let topleft = base + vec2(
+        screen_width() - ld.mini_map_target.texture.width() - 10.0,
+        10.0
+        //screen_height() - mini_map_target.texture.height() - 20.0
+    );
+    let mini_map_size = vec2(texture.width(), texture.height());
+    draw_texture_ex(
+        texture, topleft.x, topleft.y, WHITE,
+        DrawTextureParams {
+            flip_y: true,
+            dest_size: Some(mini_map_size),
+            ..Default::default()
+        }
+    );
+
+    gl_use_default_material();
+
+    // display status information
+    if let Some(player) = world.actors.get(&world.player_id()) {
+        let pos = vec2(20.0, screen_height() - 24.0 - 20.0);
+        // names of items at spot
+        let ids = world.item_ids_at(&player.pos);
+        let names = ids.iter()
+            .map(|id| world.items.get(id).unwrap())
+            .map(|item| item.description())
+            .collect::<Vec<String>>();
+        let text = names.join(", ");
+        if text.len() > 0 {
+            let pos = pos + Vec2::from((80.0, 0.0));
+            draw_text_ex(&text, pos.x, pos.y, ld.params_info);
+            
+            let text = "use <p> to pick up the items";
+            let pos = pos + Vec2::from((0.0, 30.0));
+            draw_text_ex(&text, pos.x, pos.y, ld.params_info);
+        }
+    }
+
+    // display messages
+    let mut msg_params = ld.params_info.clone();
+    let max_messages = 5;
+    let mut pos = vec2(20.0, 20.0);
+    let yoffset = 1.1 * msg_params.font_size as f32;
     
+    for message in ld.messages.iter().take(max_messages) {
+        draw_text_ex(&message, pos.x, pos.y, msg_params);
+        msg_params.color.a *= 0.7; // blend out color
+        pos.y += yoffset;
+    };
+}
+
+async fn new_game_state() -> MainState {
     // load assets
     let font = load_ttf_font("assets/DejaVuSerif.ttf").await;
-    let mut params = TextParams {
+    let params = TextParams {
         font,
         font_size: 24,
         color: RED,
@@ -450,25 +541,10 @@ async fn main() {
         ..Default::default()
     };
 
-
-    let material_vignette = load_material(
-        CRT_VERTEX_SHADER,
-        CRT_FRAGMENT_SHADER,
-        Default::default()
-    ).unwrap();
-
-    let material_bw = load_material(
-        CRT_VERTEX_SHADER,
-        BW_FRAGMENT_SHADER,
-        Default::default()
-    ).unwrap();
-
-
     // the map render target will be initialised in the main loop
-    let mut main_map_target = render_target(0, 0);
-    let mut mini_map_target = render_target(0, 0);
+    let main_map_target = render_target(0, 0);
+    let mini_map_target = render_target(0, 0);
     
-
     let (width, height) = (32.0, 32.0);
     let pattern = Pattern::Matrix {
         width, height,
@@ -502,28 +578,25 @@ async fn main() {
         tileset_actors: None
     };
 
-
-    //effects: Vec<Box<dyn TextEffect>>,
-
-    // the World contains the actual game data
-    // all of the above will be moved into the World, one by one
-    let mut world = World::new();
-    world.populate_world();
-
-    // main loop
-    let (title_x, title_y) = (10.0, 42.0);
-
-    let mut player_name: String = String::from("Sir Lancelot");
-
-    let mut actions: Vec<Action> = vec!();
-    
     let (vh, vw) = (
         (screen_height()/(height as f32)) as i32,
         (screen_width()/(width as f32)) as i32
     );
 
+    let material_vignette = load_material(
+        CRT_VERTEX_SHADER,
+        CRT_FRAGMENT_SHADER,
+        Default::default()
+    ).unwrap();
 
-    let mut ld = LoopData {
+    let material_bw = load_material(
+        CRT_VERTEX_SHADER,
+        BW_FRAGMENT_SHADER,
+        Default::default()
+    ).unwrap();
+
+
+    MainState {
         quit: false,
         last_input: get_time(),
         end_of_turn: 0.0,
@@ -534,33 +607,153 @@ async fn main() {
         viewport: Rectangle::from((0, 0, vw, vh)),
         border_size: Point::from((10, 10)),
         messages: VecDeque::new(),
-        egui_has_focus: false
-    };
+        egui_has_focus: false,
+        material_vignette,
+        material_bw,
+        main_map_target,
+        mini_map_target,
+        params,
+        params_info,
+        main_map_render_assets,
+        mini_map_render_assets,
+    }
+}
+
+/// process game actions
+fn update_world(state: &mut MainState, world: &mut World, actions: &mut Vec<Action>) {
+    while actions.len() > 0 {
+        match actions.pop().unwrap() {
+            Action::Quit => {
+                state.quit = true;
+            },
+            Action::EndTurn => {
+                state.end_of_turn = get_time();
+                world.time += 1;
+                // TODO: move NPC
+            },
+            Action::Ouch => {
+                state.messages.push_front("Ouch!".into());
+                state.end_of_turn = get_time();
+            },
+            Action::Move {actor_id, pos} => {
+                if let Some(player) = world.actors.get_mut(&actor_id) {
+                    player.pos = pos;
+                }
+                // TODO: update map
+            },
+            Action::MoveFollow {actor_id, pos, mode} => {
+                if let Some(player) = world.actors.get_mut(&actor_id) {
+                    player.pos = pos;
+                    adjust_viewport(
+                        &mut state.viewport,
+                        &state.border_size,
+                        &player.pos,
+                        mode
+                    )
+                }
+            },
+            Action::PickUp { actor_id, items } => {
+                for item_id in items {
+                    // remove object position and set owner to 0
+                    if let Some(item) = world.items.get_mut(&item_id) {
+                        state.messages.push_front(
+                            format!("You pick up {}.", item.description())
+                        );
+                        item.owner = Some(actor_id);
+                        item.pos = None;
+                        world.actors.get_mut(&actor_id).unwrap()
+                            .inventory.push(item_id.clone());
+                    }                    
+                }                    
+            },
+            Action::MoveViewport { dx, dy } => {
+                if dy != 0 {
+                    //if viewport.y1 + dy > 0 {
+                    state.viewport.y1 += dy;
+                    state.viewport.y2 += dy;
+                    //}
+                };
+
+                if dx != 0 {
+                    //if viewport.x1 + dx > 0 {
+                    state.viewport.x1 += dx;
+                    state.viewport.x2 += dx;
+                    //}
+                }
+            },
+            Action::CenterViewport => {
+                adjust_viewport(
+                    &mut state.viewport,
+                    &state.border_size,
+                    &world.player_pos(),
+                    ViewportMode::Center
+                );
+            },
+            Action::GUI(GuiAction::TestBW) => {
+                state.is_bw = !state.is_bw;
+            },
+            Action::GUI(GuiAction::HideShowInventory) => {
+                state.show_inventory = !state.show_inventory;
+                println!("Inventory:");
+                if let Some(player) = world.actors.get(&world.player_id()) {
+                    for (n, item_id) in player.inventory.iter().enumerate() {
+                        if let Some(item) = world.items.get(item_id) {
+                            println!("{} - {}", n, item.description());
+                        }
+                    }
+                }
+            },
+            Action::GUI(GuiAction::HideShowHelp) => {
+                state.show_help = !state.show_help;
+            },
+            Action::GUI(GuiAction::HideShowStatus) => {
+                state.show_status = !state.show_status;
+            }
+        }
+    }
+}
+            
+#[macroquad::main(window_conf)]
+async fn main() {
+    // TODO: parse command line arguments, e.g. --fullscreen
+
+    let mut state = new_game_state().await;
+
+    //effects: Vec<Box<dyn TextEffect>>,
+
+    // the World contains the actual game data
+    // all of the above will be moved into the World, one by one
+    let mut world = World::new();
+    world.populate_world();
+
+    // main loop
+    let mut player_name: String = String::from("Sir Lancelot");
+    let mut actions: Vec<Action> = vec!();
 
     adjust_viewport(
-        &mut ld.viewport,
-        &ld.border_size,
+        &mut state.viewport,
+        &state.border_size,
         &world.player_pos(),
         ViewportMode::Center
     );
 
-    ld.messages.push_front("Welcome to the Land of Mystery...".into());
+    state.messages.push_front("Welcome to the Land of Mystery...".into());
 
     // REPL:
     // read - read input
     // eval - perform actions
     // print - draw gui
     
-    while !ld.quit {
+    while !state.quit {
 
-        render_and_update_egui(&mut ld, &world);
+        render_and_update_egui(&mut state, &world);
 
         // update, if necessary
-        if !ld.egui_has_focus
-            && (get_time() - ld.last_input > DELTA_UPDATE)
-            && (get_time() - ld.end_of_turn > DELTA_TURN)
+        if !state.egui_has_focus
+            && (get_time() - state.last_input > DELTA_UPDATE)
+            && (get_time() - state.end_of_turn > DELTA_TURN)
         {
-            ld.last_input = get_time();
+            state.last_input = get_time();
             actions.extend(read_input(&world));
         }
 
@@ -570,209 +763,11 @@ async fn main() {
         // effects.retain(|e| e.is_alive());
         // effects.iter().for_each(|e| e.apply(&mut params));
 
-        // process game actions
-        while actions.len() > 0 {
-            match actions.pop().unwrap() {
-                Action::Quit => {
-                    ld.quit = true;
-                },
-                Action::EndTurn => {
-                    ld.end_of_turn = get_time();
-                    world.time += 1;
-                    // TODO: move NPC
-                },
-                Action::Ouch => {
-                    ld.messages.push_front("Ouch!".into());
-                    ld.end_of_turn = get_time();
-                },
-                Action::Move {actor_id, pos} => {
-                    if let Some(player) = world.actors.get_mut(&actor_id) {
-                        player.pos = pos;
-                    }
-                    // TODO: update map
-                },
-                Action::MoveFollow {actor_id, pos, mode} => {
-                    if let Some(player) = world.actors.get_mut(&actor_id) {
-                        player.pos = pos;
-                        adjust_viewport(
-                            &mut ld.viewport,
-                            &ld.border_size,
-                            &player.pos,
-                            mode
-                        )
-                    }
-                },
-                Action::PickUp { actor_id, items } => {
-                    for item_id in items {
-                        // remove object position and set owner to 0
-                        if let Some(item) = world.items.get_mut(&item_id) {
-                            ld.messages.push_front(
-                                format!("You pick up {}.", item.description())
-                            );
-                            item.owner = Some(actor_id);
-                            item.pos = None;
-                            world.actors.get_mut(&actor_id).unwrap()
-                                .inventory.push(item_id.clone());
-                        }                    
-                    }                    
-                },
-                Action::MoveViewport { dx, dy } => {
-                    if dy != 0 {
-                        //if viewport.y1 + dy > 0 {
-                            ld.viewport.y1 += dy;
-                            ld.viewport.y2 += dy;
-                        //}
-                    };
+        update_world(&mut state, &mut world, &mut actions);
 
-                    if dx != 0 {
-                        //if viewport.x1 + dx > 0 {
-                            ld.viewport.x1 += dx;
-                            ld.viewport.x2 += dx;
-                        //}
-                    }
-                },
-                Action::CenterViewport => {
-                    adjust_viewport(
-                        &mut ld.viewport,
-                        &ld.border_size,
-                        &world.player_pos(),
-                        ViewportMode::Center
-                    );
-                },
-                Action::GUI(GuiAction::TestBW) => {
-                    ld.is_bw = !ld.is_bw;
-                },
-                Action::GUI(GuiAction::HideShowInventory) => {
-                    ld.show_inventory = !ld.show_inventory;
-                    println!("Inventory:");
-                    if let Some(player) = world.actors.get(&world.player_id()) {
-                        for (n, item_id) in player.inventory.iter().enumerate() {
-                            if let Some(item) = world.items.get(item_id) {
-                                println!("{} - {}", n, item.description());
-                            }
-                        }
-                    }
-                },
-                Action::GUI(GuiAction::HideShowHelp) => {
-                    ld.show_help = !ld.show_help;
-                },
-                Action::GUI(GuiAction::HideShowStatus) => {
-                    ld.show_status = !ld.show_status;
-                }
-            }
-        }
-
-        // draw
-        clear_background(BLACK);
-
-        // --- map drawing --
-        render_map(
-            &mut main_map_target,
-            &world,
-            ld.viewport.x1, ld.viewport.y1,
-            ld.viewport.width(), ld.viewport.height(),
-            &main_map_render_assets
-        );
-
-        // select material (this is just a toy function for testing)
-        match ld.is_bw {
-            false => gl_use_material(material_vignette),
-            true => gl_use_material(material_bw)
-        };
-
-        //let base = vec2(10.0, 70.0);
-        let base = vec2(0.0, 0.0);
-        let mut map_size = vec2(0.0, 0.0);
-        let texture = main_map_target.texture;
-        map_size = vec2(texture.width(), texture.height());
-
-        draw_texture_ex(
-            texture,
-            base.x,
-            base.y,
-            WHITE,
-            DrawTextureParams {
-                flip_y: true, // this is a temporary workaround
-                dest_size: Some(map_size),
-                ..Default::default()
-            }
-        );
-
-        // draw mini map
+        render(&mut state, &world);
         
-        render_map(
-            &mut mini_map_target,
-            &world,
-            ld.viewport.x1, ld.viewport.y1,
-            48,20,
-            &mini_map_render_assets
-        );
-
-        let texture = mini_map_target.texture;
-        let topleft = base + vec2(
-            screen_width() - mini_map_target.texture.width() - 10.0,
-            10.0
-            //screen_height() - mini_map_target.texture.height() - 20.0
-        );
-        let mini_map_size = vec2(texture.width(), texture.height());
-        draw_texture_ex(
-            texture, topleft.x, topleft.y, WHITE,
-            DrawTextureParams {
-                flip_y: true,
-                dest_size: Some(mini_map_size),
-                ..Default::default()
-            }
-        );
-
-        gl_use_default_material();
-
-        // draw text with shadow
-        if false {
-            let mut params2 = params.clone();
-            params2.color = LIGHTGRAY;
-
-            draw_text_ex(
-                "Reveal - Mystic Land of Magic and Adventure", title_x+1.0, title_y+1.0, params2
-            );
-
-            draw_text_ex(
-                "Reveal - Mystic Land of Magic and Adventure", title_x, title_y, params
-            );
-        }
-
-        // display status information
-        if let Some(player) = world.actors.get(&world.player_id()) {
-            let pos = vec2(20.0, screen_height() - 24.0 - 20.0);
-            // names of items at spot
-            let ids = world.item_ids_at(&player.pos);
-            let names = ids.iter()
-                .map(|id| world.items.get(id).unwrap())
-                .map(|item| item.description())
-                .collect::<Vec<String>>();
-            let text = names.join(", ");
-            if text.len() > 0 {
-                let pos = pos + Vec2::from((80.0, 0.0));
-                draw_text_ex(&text, pos.x, pos.y, params_info);
-
-                let text = "use <p> to pick up the items";
-                let pos = pos + Vec2::from((0.0, 30.0));
-                draw_text_ex(&text, pos.x, pos.y, params_info);
-            }
-        }
-
-        // display messages
-        let mut msg_params = params_info.clone();
-        let max_messages = 5;
-        let mut pos = vec2(20.0, 20.0);
-        let yoffset = 1.1 * msg_params.font_size as f32;
-
-        for message in ld.messages.iter().take(max_messages) {
-            draw_text_ex(&message, pos.x, pos.y, msg_params);
-            msg_params.color.a *= 0.7; // blend out color
-            pos.y += yoffset;
-        };
-        
-        ld.messages.truncate(10);  // flush very old messages
+        state.messages.truncate(10);  // flush very old messages
 
         egui_macroquad::draw();
         
