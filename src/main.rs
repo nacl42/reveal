@@ -216,6 +216,21 @@ fn render_map(target: &mut RenderTarget,
 }
 
 
+struct LoopData {
+    quit: bool,
+    last_input: f64,
+    end_of_turn: f64,
+    is_bw: bool,
+    show_inventory: bool,
+    show_help: bool,
+    show_status: bool,
+    viewport: Rectangle,
+    border_size: Point,
+    messages: VecDeque<String>,
+    egui_has_focus: bool
+}
+
+
 fn read_input(world: &World) -> Vec<Action> {
 
     let mut actions = Vec::<Action>::new();
@@ -338,6 +353,73 @@ fn read_input(world: &World) -> Vec<Action> {
 }
 
 
+/// process egui events
+fn render_and_update_egui(ld: &mut LoopData, world: &World) {
+
+    ld.egui_has_focus = false;
+    
+    egui_macroquad::ui(|egui_ctx| {
+
+        // status window
+        if ld.show_status {
+            egui::Window::new("player")
+                .default_pos([0.0, screen_height()])
+                .resizable(false)
+                .collapsible(false)
+                .show(egui_ctx, |ui| {
+                    // actor position
+                    if let Some(player) = world.actors.get(&world.player_id()) {
+                        ui.label(format!("position: {}, {}", player.pos.x, player.pos.y));
+                        ui.label(format!("game time: {}", world.time));
+                    }
+                });
+        };
+            
+        // help window
+        if ld.show_help {
+            egui::Window::new("help")
+                .default_pos([screen_width(), 0.0])
+                .resizable(false)
+                .collapsible(false)
+                .show(egui_ctx, |ui| {
+                    ui.label("arrow keys - move around");
+                    ui.label("i - show/hide inventory");
+                    ui.label("p - pick up items");
+                    ui.label("c - center viewport");
+                    ui.label("shift + arrow keys - scroll map");
+                    ui.label("h - show/hide help");
+                    ui.label("s - show/hide status");
+                    ui.label("q - quit");
+                });
+        };
+            
+        if ld.show_inventory {
+            egui::Window::new("You carry the following items:")
+                .default_pos([screen_width(), screen_height()])
+                .resizable(false)
+                .collapsible(false)
+                .show(egui_ctx, |ui| {
+                    //ui.label("You carry the following items:");
+                    // let response = ui.add(
+                    //     egui::TextEdit::singleline(&mut player_name)
+                    //         .hint_text("Enter your name here")
+                    // );
+                    // egui_has_focus |= response.has_focus();
+                    
+                    //ui.separator();
+                    if let Some(player) = &world.actors.get(&world.player_id()) {
+                        for (n, item_id) in player.inventory.iter().enumerate() {
+                            if let Some(item) = &world.items.get(&item_id) {
+                                ui.label(format!("{n} - {text}", n=n+1, text=item.description()));
+                            }
+                        }
+                    }
+                });
+        }
+    });
+}
+
+
 #[macroquad::main(window_conf)]
 async fn main() {
     println!("You are in a cave and there is no light.");
@@ -440,18 +522,6 @@ async fn main() {
         (screen_width()/(width as f32)) as i32
     );
 
-    struct LoopData {
-        quit: bool,
-        last_input: f64,
-        end_of_turn: f64,
-        is_bw: bool,
-        show_inventory: bool,
-        show_help: bool,
-        show_status: bool,
-        viewport: Rectangle,
-        border_size: Point,
-        messages: VecDeque<String>
-    };
 
     let mut ld = LoopData {
         quit: false,
@@ -463,7 +533,8 @@ async fn main() {
         show_status: true,
         viewport: Rectangle::from((0, 0, vw, vh)),
         border_size: Point::from((10, 10)),
-        messages: VecDeque::new()
+        messages: VecDeque::new(),
+        egui_has_focus: false
     };
 
     adjust_viewport(
@@ -482,70 +553,10 @@ async fn main() {
     
     while !ld.quit {
 
-        // process egui events
-        let mut egui_has_focus = false;
-        egui_macroquad::ui(|egui_ctx| {
-
-            // status window
-            if ld.show_status {
-                egui::Window::new("player")
-                    .default_pos([0.0, screen_height()])
-                    .resizable(false)
-                    .collapsible(false)
-                    .show(egui_ctx, |ui| {
-                        // actor position
-                        if let Some(player) = world.actors.get(&world.player_id()) {
-                            ui.label(format!("position: {}, {}", player.pos.x, player.pos.y));
-                            ui.label(format!("game time: {}", world.time));
-                        }
-                    });
-            };
-            
-            // help window
-            if ld.show_help {
-                egui::Window::new("help")
-                    .default_pos([screen_width(), 0.0])
-                    .resizable(false)
-                    .collapsible(false)
-                    .show(egui_ctx, |ui| {
-                        ui.label("arrow keys - move around");
-                        ui.label("i - show/hide inventory");
-                        ui.label("p - pick up items");
-                        ui.label("c - center viewport");
-                        ui.label("shift + arrow keys - scroll map");
-                        ui.label("h - show/hide help");
-                        ui.label("s - show/hide status");
-                        ui.label("q - quit");
-                    });
-            };
-            
-            if ld.show_inventory {
-                egui::Window::new("You carry the following items:")
-                    .default_pos([screen_width(), screen_height()])
-                    .resizable(false)
-                    .collapsible(false)
-                    .show(egui_ctx, |ui| {
-                        //ui.label("You carry the following items:");
-                        // let response = ui.add(
-                        //     egui::TextEdit::singleline(&mut player_name)
-                        //         .hint_text("Enter your name here")
-                        // );
-                        // egui_has_focus |= response.has_focus();
-
-                        //ui.separator();
-                        if let Some(player) = &world.actors.get(&world.player_id()) {
-                            for (n, item_id) in player.inventory.iter().enumerate() {
-                                if let Some(item) = &world.items.get(&item_id) {
-                                    ui.label(format!("{n} - {text}", n=n+1, text=item.description()));
-                                }
-                            }
-                        }
-                    });
-            }
-        });
+        render_and_update_egui(&mut ld, &world);
 
         // update, if necessary
-        if !egui_has_focus
+        if !ld.egui_has_focus
             && (get_time() - ld.last_input > DELTA_UPDATE)
             && (get_time() - ld.end_of_turn > DELTA_TURN)
         {
@@ -750,21 +761,18 @@ async fn main() {
         }
 
         // display messages
-        let max_messages = 5;
-        //let mut pos = vec2(20.0, screen_height() - 20.0);
-        let mut pos = vec2(20.0, 20.0);
         let mut msg_params = params_info.clone();
+        let max_messages = 5;
+        let mut pos = vec2(20.0, 20.0);
+        let yoffset = 1.1 * msg_params.font_size as f32;
+
         for message in ld.messages.iter().take(max_messages) {
             draw_text_ex(&message, pos.x, pos.y, msg_params);
-            // move one line below (with some spacing)
-            pos.y += (1.1 * msg_params.font_size as f32);
-            // blend out color
-            msg_params.color.a *= 0.7; 
+            msg_params.color.a *= 0.7; // blend out color
+            pos.y += yoffset;
         };
-
-        // flush very old messages
-        ld.messages.truncate(10);
         
+        ld.messages.truncate(10);  // flush very old messages
 
         egui_macroquad::draw();
         
