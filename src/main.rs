@@ -225,11 +225,6 @@ fn read_input(world: &World) -> Vec<Action> {
         println!("GOODBYE");
         actions.push(Action::Quit);
     }
-
-    // U => switch player status window
-    if is_key_pressed(KeyCode::U) {
-        actions.push(Action::GUI(GuiAction::HideShowStatus));
-    }
     
     // B => switch black/white and color mode
     if is_key_pressed(KeyCode::B) {
@@ -322,6 +317,11 @@ fn read_input(world: &World) -> Vec<Action> {
     //     }
     // }
 
+    // S => switch player status window
+    if is_key_pressed(KeyCode::S) {
+        actions.push(Action::GUI(GuiAction::HideShowStatus));
+    }
+
     // P => pick up items
     if is_key_pressed(KeyCode::P) {
         let player_id = world.player_id();
@@ -348,7 +348,7 @@ async fn main() {
     println!("Scroll map with shift + cursor keys.");
     println!("Center map on player using <C>!");
     println!("List inventory with <I>, pick up items with <P>.");
-    println!("Show/hide help window with <H>, show/hide status window with <U>");
+    println!("Show/hide help window with <H>, show/hide status window with <S>");
 
     // TODO: parse command line arguments, e.g. --fullscreen
     
