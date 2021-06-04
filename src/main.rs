@@ -237,70 +237,72 @@ fn read_input(world: &World) -> Vec<Action> {
         actions.push(Action::GUI(GuiAction::TestBW));
     }
 
-    // arrows keys => scroll map
-    if is_key_down(KeyCode::Up) {
-        actions.push(Action::MoveViewport{ dx: 0, dy: -1 });
-    }
+    // shift + arrows keys => scroll map
+    if is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift) {
+        if is_key_down(KeyCode::Up) {
+            actions.push(Action::MoveViewport{ dx: 0, dy: -1 });
+        }
 
-    if is_key_down(KeyCode::Left) {
-        actions.push(Action::MoveViewport{ dx: -1, dy: 0 });
-    }
+        if is_key_down(KeyCode::Left) {
+            actions.push(Action::MoveViewport{ dx: -1, dy: 0 });
+        }
 
-    if is_key_down(KeyCode::Right) {
-        actions.push(Action::MoveViewport{ dx: 1, dy: 0 });
-    }
+        if is_key_down(KeyCode::Right) {
+            actions.push(Action::MoveViewport{ dx: 1, dy: 0 });
+        }
 
-    if is_key_down(KeyCode::Down) {
-        actions.push(Action::MoveViewport{ dx: 0, dy: 1 });
-    }
+        if is_key_down(KeyCode::Down) {
+            actions.push(Action::MoveViewport{ dx: 0, dy: 1 });
+        }
+    } else {
+        // cursor keys (w/o shift) => move player
+        let player_id = world.player_id();
+  
+        if is_key_down(KeyCode::Left) {
+            if let Some(move_action) =
+                world::move_by(&world, &player_id, -1, 0, true) {
+                    actions.push(move_action);
+                    actions.push(Action::EndTurn);
+                } else {
+                    actions.push(Action::Ouch);
+                }
+        }
+    
+        if is_key_down(KeyCode::Up) {
+            if let Some(move_action) =
+                world::move_by(&world, &player_id, 0, -1, true) {
+                    actions.push(move_action);
+                    actions.push(Action::EndTurn);
+                } else {
+                    actions.push(Action::Ouch);
+                }
+        }
 
+        if is_key_down(KeyCode::Right) {
+            if let Some(move_action) =
+                world::move_by(&world, &player_id, 1, 0, true) {
+                    actions.push(move_action);
+                    actions.push(Action::EndTurn);
+                } else {
+                    actions.push(Action::Ouch);
+                }
+        }
+    
+        if is_key_down(KeyCode::Down) {
+            if let Some(move_action) =
+                world::move_by(&world, &player_id, 0, 1, true) {
+                    actions.push(move_action);
+                    actions.push(Action::EndTurn);
+                } else {
+                    actions.push(Action::Ouch);
+                }
+        }
+    }
+    
     // C => Center Viewport
     if is_key_pressed(KeyCode::C) {
         actions.push(Action::CenterViewport);
-    }
-            
-    // ASDW => move player
-    let player_id = world.player_id();
-  
-    if is_key_down(KeyCode::A) {
-        if let Some(move_action) =
-            world::move_by(&world, &player_id, -1, 0, true) {
-                actions.push(move_action);
-                actions.push(Action::EndTurn);
-            } else {
-                actions.push(Action::Ouch);
-            }
-    }
-    
-    if is_key_down(KeyCode::W) {
-        if let Some(move_action) =
-            world::move_by(&world, &player_id, 0, -1, true) {
-                actions.push(move_action);
-                actions.push(Action::EndTurn);
-            } else {
-                actions.push(Action::Ouch);
-            }
-    }
-
-    if is_key_down(KeyCode::D) {
-        if let Some(move_action) =
-            world::move_by(&world, &player_id, 1, 0, true) {
-                actions.push(move_action);
-                actions.push(Action::EndTurn);
-            } else {
-                actions.push(Action::Ouch);
-            }
-    }
-    
-    if is_key_down(KeyCode::S) {
-        if let Some(move_action) =
-            world::move_by(&world, &player_id, 0, 1, true) {
-                actions.push(move_action);
-                actions.push(Action::EndTurn);
-            } else {
-                actions.push(Action::Ouch);
-            }
-    }
+    }            
 
     // I => hide/show inventory
     if is_key_pressed(KeyCode::I) {
@@ -342,11 +344,11 @@ async fn main() {
 
     println!("Press <q> to quit and <t> to scale text!");
     println!("Try <b> to switch color vision.");
-    println!("Move player with <A>, <S>, <D>, <W>.");
+    println!("Move player with cursor keys.");
+    println!("Scroll map with shift + cursor keys.");
     println!("Center map on player using <C>!");
     println!("List inventory with <I>, pick up items with <P>.");
     println!("Show/hide help window with <H>, show/hide status window with <U>");
-    println!("...and of course <up>, <down>, <left>, <right> to move the map!");
 
     // TODO: parse command line arguments, e.g. --fullscreen
     
@@ -506,11 +508,11 @@ async fn main() {
                     .resizable(false)
                     .collapsible(false)
                     .show(egui_ctx, |ui| {
-                        ui.label("a,s,d,w - move around");
+                        ui.label("arrow keys - move around");
                         ui.label("i - show/hide inventory");
                         ui.label("p - pick up items");
                         ui.label("c - center viewport");
-                        ui.label("arrow keys - move viewport");
+                        ui.label("shift + arrow keys - scroll map");
                         ui.label("h - show/hide help");
                         ui.label("s - show/hide status");
                         ui.label("q - quit");
