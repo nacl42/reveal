@@ -14,6 +14,7 @@
 // TODO: Tests
 
 use std::ops::{Add, AddAssign, Sub, SubAssign};
+use std::collections::HashSet;
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy, Hash, Default)]
 pub struct Point {
@@ -211,3 +212,5 @@ impl Iterator for RectangleIterator {
     }
 }
 
+
+pub type PointSet = HashSet<Point>;

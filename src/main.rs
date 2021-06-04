@@ -16,13 +16,13 @@ use effect::{TextEffect, ScaleText};
 use tileset::{Tileset, Pattern};
 use terrain::{TerrainKind, Terrain, TerrainFeature, TerrainMap};
 use actor::{Actor, ActorId}; //, ActorKind, ActorId, ActorMap};
-use point::{Point, Rectangle};
+use point::{Point, Rectangle, PointSet};
 use item::{ItemKind}; //ItemId, Item, ItemKind, ItemMap};
 use world::{World, ViewportMode, adjust_viewport};
 use item::Item;
 use action::{Action, GuiAction};
 
-use std::collections::VecDeque;
+use std::collections::{VecDeque};
 
 const CRT_FRAGMENT_SHADER: &'static str = include_str!("shaders/vignette_fragment.glsl");
 const CRT_VERTEX_SHADER: &'static str = include_str!("shaders/vignette_vertex.glsl");
@@ -224,6 +224,7 @@ struct MainState {
     show_inventory: bool,
     show_help: bool,
     show_status: bool,
+    draw_fov: bool,
     viewport: Rectangle,
     border_size: Point,
     messages: VecDeque<String>,
@@ -331,6 +332,11 @@ fn read_input(world: &World) -> Vec<Action> {
     if is_key_pressed(KeyCode::H) {
         actions.push(Action::GUI(GuiAction::HideShowHelp));
     }
+
+    // F => hide/show field of view
+    if is_key_pressed(KeyCode::F) {
+        actions.push(Action::GUI(GuiAction::HideShowFOV));
+    }
     
         // T => show off text effect
         // AGAIN:
@@ -377,8 +383,19 @@ fn render_and_update_egui(ld: &mut MainState, world: &World) {
                 .show(egui_ctx, |ui| {
                     // actor position
                     if let Some(player) = world.actors.get(&world.player_id()) {
-                        ui.label(format!("position: {}, {}", player.pos.x, player.pos.y));
-                        ui.label(format!("game time: {}", world.time));
+                        ui.label(format!("position: {}, {}",
+                                         player.pos.x,
+                                         player.pos.y
+                        ));
+                        ui.label(format!("viewport: {}, {}, {}, {}",
+                                         ld.viewport.x1,
+                                         ld.viewport.y1,
+                                         ld.viewport.x2,
+                                         ld.viewport.y2
+                        ));
+                        ui.label(format!("game time: {}",
+                                         world.time
+                        ));
                     }
                 });
         };
@@ -397,6 +414,7 @@ fn render_and_update_egui(ld: &mut MainState, world: &World) {
                     ui.label("shift + arrow keys - scroll map");
                     ui.label("h - show/hide help");
                     ui.label("s - show/hide status");
+                    ui.label("f - show/hide field of view");
                     ui.label("q - quit");
                 });
         };
@@ -515,6 +533,7 @@ impl MainState {
             show_inventory: true,
             show_help: true,
             show_status: true,
+            draw_fov: false,
             viewport: Rectangle::from((0, 0, vw, vh)),
             border_size: Point::from((10, 10)),
             messages: VecDeque::new(),
@@ -621,6 +640,9 @@ impl MainState {
                 },
                 Action::GUI(GuiAction::HideShowStatus) => {
                     self.show_status = !self.show_status;
+                },
+                Action::GUI(GuiAction::HideShowFOV) => {
+                    self.draw_fov = !self.draw_fov;
                 }
             }
         }
@@ -658,6 +680,31 @@ impl MainState {
                         }
         );
 
+        // EXPERIMENTAL: highlight certain tiles by surrounding
+        // them with a red rectangle
+        if self.draw_fov {
+            let mut points = PointSet::new();
+            let p = world.player_pos();
+            points.insert(p.clone());
+            points.insert(p.clone() + (0, 1).into());
+            points.insert(p.clone() + (0, 2).into());
+            points.insert(p.clone() + (0, -1).into());
+            points.insert(p.clone() + (0, -2).into());
+            points.insert(p.clone() + (1, 0).into());
+            points.insert(p.clone() + (2, 0).into());
+            points.insert(p.clone() + (-1, 0).into());
+            points.insert(p.clone() + (-2, 0).into());
+            points.insert(p.clone() + (-1, -1).into());
+            points.insert(p.clone() + (1, -1).into());
+            points.insert(p.clone() + (-1, 1).into());
+            points.insert(p.clone() + (1, 1).into());
+            for p in points.iter() {
+                let x = (p.x - self.viewport.x1) as f32 * 32.0 + base.x;
+                let y = (p.y - self.viewport.y1) as f32 * 32.0 + base.y;
+                draw_rectangle_lines(x, y, 32.0, 32.0, 4.0, RED);
+            }
+        };
+        
         // draw mini map
         render_map(
             &mut self.mini_map_target,
