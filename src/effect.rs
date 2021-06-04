@@ -1,5 +1,12 @@
 use macroquad::prelude::*;
 
+//effects: Vec<Box<dyn TextEffect>>,
+// update and apply effects
+// AGAIN:
+// effects.iter_mut().for_each(|e| e.step());
+// effects.retain(|e| e.is_alive());
+// effects.iter().for_each(|e| e.apply(&mut params));
+
 pub trait TextEffect {
     fn apply(&self, params: &mut TextParams);
     fn step(&mut self);

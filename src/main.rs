@@ -428,306 +428,310 @@ fn render_and_update_egui(ld: &mut MainState, world: &World) {
 }
 
 
-fn render(ld: &mut MainState, world: &World) {
-    clear_background(BLACK);
 
-    // --- map drawing --
-    render_map(
-        &mut ld.main_map_target,
-        &world,
-        ld.viewport.x1, ld.viewport.y1,
-        ld.viewport.width(), ld.viewport.height(),
-        &ld.main_map_render_assets
-    );
 
-    // select material (this is just a toy function for testing)
-    match ld.is_bw {
-        false => gl_use_material(ld.material_vignette),
-        true => gl_use_material(ld.material_bw)
-    };
-
-    //let base = vec2(10.0, 70.0);
-    let base = vec2(0.0, 0.0);
-    let mut map_size = vec2(0.0, 0.0);
-    let texture = ld.main_map_target.texture;
-    map_size = vec2(texture.width(), texture.height());
-
-    draw_texture_ex(
-        texture,
-        base.x,
-        base.y,
-        WHITE,
-        DrawTextureParams {
-            flip_y: true, // this is a temporary workaround
-            dest_size: Some(map_size),
-            ..Default::default()
-        }
-    );
-
-    // draw mini map
-    render_map(
-        &mut ld.mini_map_target,
-        &world,
-        ld.viewport.x1, ld.viewport.y1,
-        48,20,
-        &ld.mini_map_render_assets
-    );
-
-    let texture = ld.mini_map_target.texture;
-    let topleft = base + vec2(
-        screen_width() - ld.mini_map_target.texture.width() - 10.0,
-        10.0
-        //screen_height() - mini_map_target.texture.height() - 20.0
-    );
-    let mini_map_size = vec2(texture.width(), texture.height());
-    draw_texture_ex(
-        texture, topleft.x, topleft.y, WHITE,
-        DrawTextureParams {
-            flip_y: true,
-            dest_size: Some(mini_map_size),
-            ..Default::default()
-        }
-    );
-
-    gl_use_default_material();
-
-    // display status information
-    if let Some(player) = world.actors.get(&world.player_id()) {
-        let pos = vec2(20.0, screen_height() - 24.0 - 20.0);
-        // names of items at spot
-        let ids = world.item_ids_at(&player.pos);
-        let names = ids.iter()
-            .map(|id| world.items.get(id).unwrap())
-            .map(|item| item.description())
-            .collect::<Vec<String>>();
-        let text = names.join(", ");
-        if text.len() > 0 {
-            let pos = pos + Vec2::from((80.0, 0.0));
-            draw_text_ex(&text, pos.x, pos.y, ld.params_info);
-            
-            let text = "use <p> to pick up the items";
-            let pos = pos + Vec2::from((0.0, 30.0));
-            draw_text_ex(&text, pos.x, pos.y, ld.params_info);
-        }
-    }
-
-    // display messages
-    let mut msg_params = ld.params_info.clone();
-    let max_messages = 5;
-    let mut pos = vec2(20.0, 20.0);
-    let yoffset = 1.1 * msg_params.font_size as f32;
-    
-    for message in ld.messages.iter().take(max_messages) {
-        draw_text_ex(&message, pos.x, pos.y, msg_params);
-        msg_params.color.a *= 0.7; // blend out color
-        pos.y += yoffset;
-    };
+#[derive(Debug)]
+pub enum MainStateError {
+    Foo
 }
 
-async fn new_game_state() -> MainState {
-    // load assets
-    let font = load_ttf_font("assets/DejaVuSerif.ttf").await;
-    let params = TextParams {
-        font,
-        font_size: 24,
-        color: RED,
-        ..Default::default()
-    };
+impl MainState {
+    async fn new() -> Result<MainState, MainStateError> {
+        // load assets
+        let font = load_ttf_font("assets/DejaVuSerif.ttf").await;
+        let params = TextParams {
+            font,
+            font_size: 24,
+            color: RED,
+            ..Default::default()
+        };
 
-    let params_info = TextParams {
-        font,
-        font_size: 16,
-        color: WHITE,
-        ..Default::default()
-    };
+        let params_info = TextParams {
+            font,
+            font_size: 16,
+            color: WHITE,
+            ..Default::default()
+        };
 
-    // the map render target will be initialised in the main loop
-    let main_map_target = render_target(0, 0);
-    let mini_map_target = render_target(0, 0);
-    
-    let (width, height) = (32.0, 32.0);
-    let pattern = Pattern::Matrix {
-        width, height,
-        columns: 10, rows: 10
-    };
-    let main_map_render_assets = MapRenderAssets {
-        tile_width: width,
-        tile_height: height,
-        tileset_terrain: Tileset::new(
-            "assets/terrain32.png", &pattern).await.ok(),
-        tileset_features: Tileset::new(
-            "assets/features32.png", &pattern).await.ok(),
-        tileset_items: Tileset::new(
-            "assets/items32.png", &pattern).await.ok(),
-        tileset_actors: Tileset::new(
-            "assets/actors32.png", &pattern).await.ok(),
-    };    
+        // the map render target will be initialised in the main loop
+        let main_map_target = render_target(0, 0);
+        let mini_map_target = render_target(0, 0);
+        
+        let (width, height) = (32.0, 32.0);
+        let pattern = Pattern::Matrix {
+            width, height,
+            columns: 10, rows: 10
+        };
+        let main_map_render_assets = MapRenderAssets {
+            tile_width: width,
+            tile_height: height,
+            tileset_terrain: Tileset::new(
+                "assets/terrain32.png", &pattern).await.ok(),
+            tileset_features: Tileset::new(
+                "assets/features32.png", &pattern).await.ok(),
+            tileset_items: Tileset::new(
+                "assets/items32.png", &pattern).await.ok(),
+            tileset_actors: Tileset::new(
+                "assets/actors32.png", &pattern).await.ok(),
+        };    
 
-    // For now, the mini map uses the identical tileset as the main
-    // map. We could use the tiny tileset2.png, but as long as
-    // rendering speed is ok, it is much easier to maintain only one
-    // tileset.
-    let mini_map_render_assets = MapRenderAssets {
-        tile_width: 4.0,
-        tile_height: 4.0,
-        tileset_terrain: Tileset::new(
+        // For now, the mini map uses the identical tileset as the main
+        // map. We could use the tiny tileset2.png, but as long as
+        // rendering speed is ok, it is much easier to maintain only one
+        // tileset.
+        let mini_map_render_assets = MapRenderAssets {
+            tile_width: 4.0,
+            tile_height: 4.0,
+            tileset_terrain: Tileset::new(
             "assets/terrain32.png", &pattern
-        ).await.ok(),
-        tileset_features: None,
-        tileset_items: None,
-        tileset_actors: None
-    };
+            ).await.ok(),
+            tileset_features: None,
+            tileset_items: None,
+            tileset_actors: None
+        };
 
-    let (vh, vw) = (
-        (screen_height()/(height as f32)) as i32,
-        (screen_width()/(width as f32)) as i32
-    );
+        let (vh, vw) = (
+            (screen_height()/(height as f32)) as i32,
+            (screen_width()/(width as f32)) as i32
+        );
 
-    let material_vignette = load_material(
-        CRT_VERTEX_SHADER,
-        CRT_FRAGMENT_SHADER,
-        Default::default()
-    ).unwrap();
+        let material_vignette = load_material(
+            CRT_VERTEX_SHADER,
+            CRT_FRAGMENT_SHADER,
+            Default::default()
+        ).unwrap();
 
-    let material_bw = load_material(
-        CRT_VERTEX_SHADER,
-        BW_FRAGMENT_SHADER,
-        Default::default()
-    ).unwrap();
+        let material_bw = load_material(
+            CRT_VERTEX_SHADER,
+            BW_FRAGMENT_SHADER,
+            Default::default()
+        ).unwrap();
 
+        let state = MainState {
+            quit: false,
+            last_input: get_time(),
+            end_of_turn: 0.0,
+            is_bw: false,
+            show_inventory: true,
+            show_help: true,
+            show_status: true,
+            viewport: Rectangle::from((0, 0, vw, vh)),
+            border_size: Point::from((10, 10)),
+            messages: VecDeque::new(),
+            egui_has_focus: false,
+            material_vignette,
+            material_bw,
+            main_map_target,
+            mini_map_target,
+            params,
+            params_info,
+            main_map_render_assets,
+            mini_map_render_assets,
+        };
 
-    MainState {
-        quit: false,
-        last_input: get_time(),
-        end_of_turn: 0.0,
-        is_bw: false,
-        show_inventory: true,
-        show_help: true,
-        show_status: true,
-        viewport: Rectangle::from((0, 0, vw, vh)),
-        border_size: Point::from((10, 10)),
-        messages: VecDeque::new(),
-        egui_has_focus: false,
-        material_vignette,
-        material_bw,
-        main_map_target,
-        mini_map_target,
-        params,
-        params_info,
-        main_map_render_assets,
-        mini_map_render_assets,
+        Ok(state)
     }
-}
 
-/// process game actions
-fn update_world(state: &mut MainState, world: &mut World, actions: &mut Vec<Action>) {
-    while actions.len() > 0 {
-        match actions.pop().unwrap() {
-            Action::Quit => {
-                state.quit = true;
-            },
-            Action::EndTurn => {
-                state.end_of_turn = get_time();
-                world.time += 1;
-                // TODO: move NPC
-            },
-            Action::Ouch => {
-                state.messages.push_front("Ouch!".into());
-                state.end_of_turn = get_time();
-            },
-            Action::Move {actor_id, pos} => {
-                if let Some(player) = world.actors.get_mut(&actor_id) {
-                    player.pos = pos;
-                }
-                // TODO: update map
-            },
-            Action::MoveFollow {actor_id, pos, mode} => {
-                if let Some(player) = world.actors.get_mut(&actor_id) {
-                    player.pos = pos;
-                    adjust_viewport(
-                        &mut state.viewport,
-                        &state.border_size,
-                        &player.pos,
-                        mode
-                    )
-                }
-            },
-            Action::PickUp { actor_id, items } => {
-                for item_id in items {
-                    // remove object position and set owner to 0
-                    if let Some(item) = world.items.get_mut(&item_id) {
-                        state.messages.push_front(
-                            format!("You pick up {}.", item.description())
-                        );
-                        item.owner = Some(actor_id);
-                        item.pos = None;
-                        world.actors.get_mut(&actor_id).unwrap()
-                            .inventory.push(item_id.clone());
+    /// process game actions
+    fn update(&mut self, world: &mut World, actions: &mut Vec<Action>) {
+        while actions.len() > 0 {
+            match actions.pop().unwrap() {
+                Action::Quit => {
+                    self.quit = true;
+                },
+                Action::EndTurn => {
+                    self.end_of_turn = get_time();
+                    world.time += 1;
+                    // TODO: move NPC
+                },
+                Action::Ouch => {
+                    self.messages.push_front("Ouch!".into());
+                    self.end_of_turn = get_time();
+                },
+                Action::Move {actor_id, pos} => {
+                    if let Some(player) = world.actors.get_mut(&actor_id) {
+                        player.pos = pos;
+                    }
+                    // TODO: update map
+                },
+                Action::MoveFollow {actor_id, pos, mode} => {
+                    if let Some(player) = world.actors.get_mut(&actor_id) {
+                        player.pos = pos;
+                        adjust_viewport(
+                            &mut self.viewport,
+                            &self.border_size,
+                            &player.pos,
+                            mode
+                        )
+                    }
+                },
+                Action::PickUp { actor_id, items } => {
+                    for item_id in items {
+                        // remove object position and set owner to 0
+                        if let Some(item) = world.items.get_mut(&item_id) {
+                            self.messages.push_front(
+                                format!("You pick up {}.", item.description())
+                            );
+                            item.owner = Some(actor_id);
+                            item.pos = None;
+                            world.actors.get_mut(&actor_id).unwrap()
+                                .inventory.push(item_id.clone());
+                        }                    
                     }                    
-                }                    
-            },
-            Action::MoveViewport { dx, dy } => {
-                if dy != 0 {
-                    //if viewport.y1 + dy > 0 {
-                    state.viewport.y1 += dy;
-                    state.viewport.y2 += dy;
-                    //}
-                };
+                },
+                Action::MoveViewport { dx, dy } => {
+                    if dy != 0 {
+                        //if viewport.y1 + dy > 0 {
+                        self.viewport.y1 += dy;
+                        self.viewport.y2 += dy;
+                        //}
+                    };
 
-                if dx != 0 {
-                    //if viewport.x1 + dx > 0 {
-                    state.viewport.x1 += dx;
-                    state.viewport.x2 += dx;
-                    //}
-                }
-            },
-            Action::CenterViewport => {
-                adjust_viewport(
-                    &mut state.viewport,
-                    &state.border_size,
-                    &world.player_pos(),
-                    ViewportMode::Center
-                );
-            },
-            Action::GUI(GuiAction::TestBW) => {
-                state.is_bw = !state.is_bw;
-            },
-            Action::GUI(GuiAction::HideShowInventory) => {
-                state.show_inventory = !state.show_inventory;
-                println!("Inventory:");
-                if let Some(player) = world.actors.get(&world.player_id()) {
-                    for (n, item_id) in player.inventory.iter().enumerate() {
-                        if let Some(item) = world.items.get(item_id) {
-                            println!("{} - {}", n, item.description());
+                    if dx != 0 {
+                        //if viewport.x1 + dx > 0 {
+                        self.viewport.x1 += dx;
+                        self.viewport.x2 += dx;
+                        //}
+                    }
+                },
+                Action::CenterViewport => {
+                    adjust_viewport(
+                        &mut self.viewport,
+                        &self.border_size,
+                        &world.player_pos(),
+                        ViewportMode::Center
+                    );
+                },
+                Action::GUI(GuiAction::TestBW) => {
+                    self.is_bw = !self.is_bw;
+                },
+                Action::GUI(GuiAction::HideShowInventory) => {
+                    self.show_inventory = !self.show_inventory;
+                    println!("Inventory:");
+                    if let Some(player) = world.actors.get(&world.player_id()) {
+                        for (n, item_id) in player.inventory.iter().enumerate() {
+                            if let Some(item) = world.items.get(item_id) {
+                                println!("{} - {}", n, item.description());
+                            }
                         }
                     }
+                },
+                Action::GUI(GuiAction::HideShowHelp) => {
+                    self.show_help = !self.show_help;
+                },
+                Action::GUI(GuiAction::HideShowStatus) => {
+                    self.show_status = !self.show_status;
                 }
-            },
-            Action::GUI(GuiAction::HideShowHelp) => {
-                state.show_help = !state.show_help;
-            },
-            Action::GUI(GuiAction::HideShowStatus) => {
-                state.show_status = !state.show_status;
             }
         }
     }
-}
+    
+    fn render(&mut self, world: &World) {
+        clear_background(BLACK);
+
+        // --- map drawing --
+        render_map(
+            &mut self.main_map_target,
+            &world,
+            self.viewport.x1, self.viewport.y1,
+            self.viewport.width(), self.viewport.height(),
+            &self.main_map_render_assets
+        );
+
+        // select material (this is just a toy function for testing)
+        match self.is_bw {
+            false => gl_use_material(self.material_vignette),
+            true => gl_use_material(self.material_bw)
+        };
+
+        //let base = vec2(10.0, 70.0);
+        let base = vec2(0.0, 0.0);
+        let mut map_size = vec2(0.0, 0.0);
+        let texture = self.main_map_target.texture;
+        map_size = vec2(texture.width(), texture.height());
+
+        draw_texture_ex(texture, base.x, base.y, WHITE,
+                        DrawTextureParams {
+                            flip_y: true, // this is a temporary workaround
+                            dest_size: Some(map_size),
+                            ..Default::default()
+                        }
+        );
+
+        // draw mini map
+        render_map(
+            &mut self.mini_map_target,
+            &world,
+            self.viewport.x1, self.viewport.y1,
+            48,20,
+            &self.mini_map_render_assets
+        );
+
+        let texture = self.mini_map_target.texture;
+        let topleft = base + vec2(
+            screen_width() - self.mini_map_target.texture.width() - 10.0,
+            10.0
+            //screen_height() - mini_map_target.texture.height() - 20.0
+        );
+        let mini_map_size = vec2(texture.width(), texture.height());
+        draw_texture_ex(
+            texture, topleft.x, topleft.y, WHITE,
+            DrawTextureParams {
+                flip_y: true,
+                dest_size: Some(mini_map_size),
+                ..Default::default()
+            }
+        );
+
+        gl_use_default_material();
+
+        // display status information
+        if let Some(player) = world.actors.get(&world.player_id()) {
+            let pos = vec2(20.0, screen_height() - 24.0 - 20.0);
+            // names of items at spot
+            let ids = world.item_ids_at(&player.pos);
+            let names = ids.iter()
+                .map(|id| world.items.get(id).unwrap())
+                .map(|item| item.description())
+                .collect::<Vec<String>>();
+            let text = names.join(", ");
+            if text.len() > 0 {
+                let pos = pos + Vec2::from((80.0, 0.0));
+                draw_text_ex(&text, pos.x, pos.y, self.params_info);
             
+                let text = "use <p> to pick up the items";
+                let pos = pos + Vec2::from((0.0, 30.0));
+                draw_text_ex(&text, pos.x, pos.y, self.params_info);
+            }
+        }
+
+        // display messages
+        let mut msg_params = self.params_info.clone();
+        let max_messages = 5;
+        let mut pos = vec2(20.0, 20.0);
+        let yoffset = 1.1 * msg_params.font_size as f32;
+    
+        for message in self.messages.iter().take(max_messages) {
+            draw_text_ex(&message, pos.x, pos.y, msg_params);
+            msg_params.color.a *= 0.7; // blend out color
+            pos.y += yoffset;
+        };
+    }
+}
+
+
+
 #[macroquad::main(window_conf)]
 async fn main() {
     // TODO: parse command line arguments, e.g. --fullscreen
 
-    let mut state = new_game_state().await;
-
-    //effects: Vec<Box<dyn TextEffect>>,
+    let mut state = MainState::new().await.unwrap();
 
     // the World contains the actual game data
-    // all of the above will be moved into the World, one by one
     let mut world = World::new();
     world.populate_world();
 
     // main loop
-    let mut player_name: String = String::from("Sir Lancelot");
     let mut actions: Vec<Action> = vec!();
 
     adjust_viewport(
@@ -739,11 +743,6 @@ async fn main() {
 
     state.messages.push_front("Welcome to the Land of Mystery...".into());
 
-    // REPL:
-    // read - read input
-    // eval - perform actions
-    // print - draw gui
-    
     while !state.quit {
 
         render_and_update_egui(&mut state, &world);
@@ -757,16 +756,8 @@ async fn main() {
             actions.extend(read_input(&world));
         }
 
-        // update and apply effects
-        // AGAIN:
-        // effects.iter_mut().for_each(|e| e.step());
-        // effects.retain(|e| e.is_alive());
-        // effects.iter().for_each(|e| e.apply(&mut params));
-
-        update_world(&mut state, &mut world, &mut actions);
-
-        render(&mut state, &world);
-        
+        state.update(&mut world, &mut actions);
+        state.render(&world);
         state.messages.truncate(10);  // flush very old messages
 
         egui_macroquad::draw();
