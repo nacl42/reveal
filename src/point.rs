@@ -30,6 +30,11 @@ impl Point {
             y
         }
     }
+
+    /// Return a new point with an offset (dx, dy).
+    pub fn offset(&self, dx: i32, dy: i32) -> Point {
+        Point { x: self.x + dx, y: self.y + dy}
+    }
 }
 
 impl From<(i32, i32)> for Point {

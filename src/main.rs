@@ -20,7 +20,7 @@ use item::{ItemKind}; //ItemId, Item, ItemKind, ItemMap};
 use world::{World, ViewportMode, adjust_viewport};
 use item::Item;
 use action::{Action, GuiAction};
-use render::{Map, Tileset, Pattern, TerrainRenderer, ItemRenderer, ActorRenderer};
+use render::{Map, Tileset, Pattern, TerrainRenderer, ItemRenderer, ActorRenderer, HighlightRenderer};
 
 use std::collections::{VecDeque};
 
@@ -42,186 +42,6 @@ fn window_conf() -> Conf {
 }
 
 
-// TBR
-fn terrain_class_index(tile: &Terrain) -> usize {
-    match tile.kind {
-        TerrainKind::Grass => 1,
-        TerrainKind::Path => 2,
-        TerrainKind::Water => 3,
-        TerrainKind::Wall => 4,
-        //Sand => 5,
-        TerrainKind::Hedge => 6,
-        TerrainKind::ThickGrass => 10,
-        TerrainKind::StoneFloor => 11,
-        TerrainKind::ShallowWater => 12,
-        // Grate => 13,
-        TerrainKind::Door(_) => 14,
-        TerrainKind::Window => 15,
-        _ => 0,
-    }
-}
-
-// TBR
-fn terrain_feature_index(tile: &Terrain) -> Option<usize> {
-    if let Some(feature) = &tile.feature {
-        let index = match feature {
-            TerrainFeature::Mushroom => 20,
-            TerrainFeature::Flower(n) => (40 + (n % 4) as usize),
-            TerrainFeature::Stones => 10,
-            TerrainFeature::Waterlily => 30
-        };
-        Some(index)
-    } else {
-        None
-    }
-}
-
-fn item_index(item: &Item) -> usize {
-    match item.kind {
-        ItemKind::Money(_) => 1,
-        ItemKind::Wand => 2
-    }
-}
-
-
-pub struct MapRenderAssets {
-    tile_width: f32,
-    tile_height: f32,
-    tileset_terrain: Option<Tileset>,
-    tileset_features: Option<Tileset>,
-    tileset_actors: Option<Tileset>,
-    tileset_items: Option<Tileset>
-}
-
-fn render_map(target: &mut RenderTarget,
-              world: &World,
-              off_x: i32, off_y: i32,
-              tiles_x: i32, tiles_y: i32,
-              assets: &MapRenderAssets)
-{
-    let sep = vec2(1.0, 1.0);  // TBR
-        
-    // render target for map drawing   // TBR
-    let map_size = vec2(
-        (tiles_x as f32 * (assets.tile_width + sep.x)) as f32,
-        (tiles_y as f32 * (assets.tile_height + sep.y)) as f32
-    );
-
-    // TBR
-    if (target.texture.width() != map_size.x) ||
-        (target.texture.height() != map_size.y) {
-            *target = render_target(map_size.x as u32, map_size.y as u32);
-        }
-    target.texture.set_filter(FilterMode::Nearest);
-
-    // TBR
-    // set camera, so that drawing operations act
-    // on the texture
-    let mut camera = Camera2D::from_display_rect(
-        Rect::new(0.0, 0.0, map_size.x, map_size.y));
-    camera.render_target = Some(*target);
-    set_camera(&camera);
-
-    // TBR
-    // draw map onto texture
-    clear_background(BLACK);
-
-    // background
-    let mut py = 0.0;
-    for y in 0..tiles_y {
-        let mut px = 0.0;
-        for x in 0..tiles_x {
-            let tile_xy = Point::from((x as i32 + off_x, y as i32 + off_y));
-                
-            // draw terrain
-            if let Some(terrain) = world.terrain.get(&tile_xy) {
-                // draw terrain base tile
-                if let Some(tileset) = &assets.tileset_terrain {
-                    let index = terrain_class_index(&terrain);
-                    if let Some(&source) = tileset.sources.get(index) {
-                        draw_texture_ex(
-                            tileset.texture,
-                            px, py, WHITE,
-                            DrawTextureParams {
-                                dest_size: Some(Vec2::new(assets.tile_width, assets.tile_height)),
-                                source: Some(source),
-                                ..Default::default()
-                            }
-                        )
-                    }
-                }
-
-                // draw terrain feature (if present)
-                if let Some(tileset) = &assets.tileset_features {
-                    if let Some(index) = terrain_feature_index(&terrain) {
-                        if let Some(&source) = tileset.sources.get(index) {
-                            draw_texture_ex(
-                                tileset.texture,
-                                px, py, WHITE,
-                                DrawTextureParams {
-                                    dest_size: Some(Vec2::new(assets.tile_width, assets.tile_height)),
-                                    source: Some(source),
-                                    ..Default::default()
-                                }
-                            )
-                        }
-                    }
-                }
-                    
-                // draw items
-                if let Some(tileset) = &assets.tileset_items {
-                    let items = world.item_ids_at(&tile_xy);
-                    for index in items {                        
-                        let mut tileset_index = 0;
-                        if let Some(item) = world.items.get(&index) {
-                            tileset_index = item_index(&item);
-                        };
-                    
-                        if let Some(&source) =
-                            tileset.sources.get(tileset_index)
-                        {
-                            draw_texture_ex(
-                                tileset.texture,
-                                px, py, WHITE,
-                                DrawTextureParams {
-                                    dest_size: Some(Vec2::new(assets.tile_width, assets.tile_height)),
-                                    source: Some(source),
-                                    ..Default::default()
-                                }
-                            )
-                        }
-                    }
-                }
-
-                // draw actors
-                if let Some(tileset) = &assets.tileset_actors {
-                    for _ in world.actors.iter()
-                        .filter(|(_, actor)| actor.pos == tile_xy) {
-                            let index = 2; // TODO: get index from actor
-                            if let Some(&source) = tileset.sources.get(index) {
-                                draw_texture_ex(
-                                    tileset.texture,
-                                    px, py, WHITE,
-                                    DrawTextureParams {
-                                        dest_size: Some(Vec2::new(assets.tile_width, assets.tile_height)),
-                                        source: Some(source),
-                                        ..Default::default()
-                                    }
-                                )
-                            }
-                        }
-                }
-            }                
-            px += assets.tile_width + sep.x;
-        }
-        py += assets.tile_height + sep.y;
-    }
-
-    // TBR
-    // draw texture on screen
-    set_default_camera();
-}
-
 
 struct MainState {
     quit: bool,
@@ -238,13 +58,10 @@ struct MainState {
     egui_has_focus: bool,
     material_vignette: Material,
     material_bw: Material,
-    main_map_target: RenderTarget,
-    mini_map_target: RenderTarget,
     params: TextParams,
     params_info: TextParams,
-    main_map_render_assets: MapRenderAssets,
-    mini_map_render_assets: MapRenderAssets,
     main_map: Map,
+    mini_map: Map
 }
 
 
@@ -411,7 +228,7 @@ fn render_and_update_egui(ld: &mut MainState, world: &World) {
         // help window
         if ld.show_help {
             egui::Window::new("help")
-                .default_pos([screen_width(), 0.0])
+                .default_pos([screen_width(), screen_height() / 3.0])
                 .resizable(false)
                 .collapsible(false)
                 .show(egui_ctx, |ui| {
@@ -479,47 +296,20 @@ impl MainState {
             ..Default::default()
         };
 
-        // the map render target will be initialised in the main loop
-        let main_map_target = render_target(0, 0); // TBR
-        let mini_map_target = render_target(0, 0); // TBR
-        
-        let (width, height) = (32.0, 32.0); // TBR
-        let pattern = Pattern::Matrix { // KEEP
+        let (width, height) = (32.0, 32.0);
+        let pattern = Pattern::Matrix {
             width, height,
             columns: 10, rows: 10
         };
-        let main_map_render_assets = MapRenderAssets {
-            tile_width: width,
-            tile_height: height,
-            tileset_terrain: Tileset::new(
-                "assets/terrain32.png", &pattern).await.ok(),
-            tileset_features: Tileset::new(
-                "assets/features32.png", &pattern).await.ok(),
-            tileset_items: Tileset::new(
-                "assets/items32.png", &pattern).await.ok(),
-            tileset_actors: Tileset::new(
-                "assets/actors32.png", &pattern).await.ok(),
-        };    
 
-        // For now, the mini map uses the identical tileset as the main
-        // map. We could use the tiny tileset2.png, but as long as
-        // rendering speed is ok, it is much easier to maintain only one
-        // tileset.
-        let mini_map_render_assets = MapRenderAssets {
-            tile_width: 4.0,
-            tile_height: 4.0,
-            tileset_terrain: Tileset::new("assets/terrain32.png", &pattern).await.ok(),
-            tileset_features: None,
-            tileset_items: None,
-            tileset_actors: None
-        };
-
+        // TODO: screen_width() and screen_height() return only the
+        // window's width and height, even if fullscreen mode is
+        // enabled. An issue has been filed.
         let vw = (screen_width()/(width as f32)) as i32;
         let vh = (screen_height()/(height as f32)) as i32;
         let viewport = Rectangle::from((0, 0, vw, vh));
 
-        // EXPERIMENTAL
-        let mut main_map = Map::new(32.0, 32.0, Point::new(vw, vh));
+        let mut main_map = Map::new(width, height, Point::new(vw, vh));
         main_map.add_layer(Box::new(TerrainRenderer {
             terrains: Tileset::new("assets/terrain32.png", &pattern).await.unwrap(),
             features: Tileset::new("assets/features32.png", &pattern).await.unwrap(),
@@ -531,7 +321,15 @@ impl MainState {
             tileset: Tileset::new("assets/actors32.png", &pattern).await.unwrap()
         }));
 
-        //let mut mini_map = Map::new(2.0, 2.0);
+        main_map.add_layer(Box::new(HighlightRenderer()));
+
+        // TODO: share renderer, so that we do not need to allocate a texture
+        // more than once.
+        let mut mini_map = Map::new(4.0, 4.0, Point::new(vw, vh));
+        mini_map.add_layer(Box::new(TerrainRenderer {
+            terrains: Tileset::new("assets/terrain32.png", &pattern).await.unwrap(),
+            features: Tileset::new("assets/features32.png", &pattern).await.unwrap(),
+        }));
         
         let material_vignette = load_material(
             CRT_VERTEX_SHADER,
@@ -560,13 +358,10 @@ impl MainState {
             egui_has_focus: false,
             material_vignette,
             material_bw,
-            main_map_target,
-            mini_map_target,
             params,
             params_info,
-            main_map_render_assets,
-            mini_map_render_assets,
-            main_map
+            main_map,
+            mini_map
         };
 
         Ok(state)
@@ -668,22 +463,36 @@ impl MainState {
             }
         }
     }
-    
+
+    fn update_fov(&self, world: &mut World) {
+        // EXPERIMENTAL: highlight certain tiles by surrounding
+        // them with a red rectangle
+        let p = world.player_pos();
+        let points = &mut world.highlights;
+        points.clear();
+        if self.draw_fov {
+            points.insert(p.clone());
+            points.insert(p.offset(0, 1));
+            points.insert(p.offset(0, 2));
+            points.insert(p.offset(0, -1));
+            points.insert(p.offset(0, -2));
+            points.insert(p.offset(1, 0));
+            points.insert(p.offset(2, 0));
+            points.insert(p.offset(-1, 0));
+            points.insert(p.offset(-2, 0));
+            points.insert(p.offset(-1, -1));
+            points.insert(p.offset(1, -1));
+            points.insert(p.offset(-1, 1));
+            points.insert(p.offset(1, 1));
+        }
+    }
+   
     fn render(&mut self, world: &World) {
         clear_background(BLACK);
 
-        // EXPERIMENTAL
-        self.main_map.render_to_target(&world, &self.viewport);
+        // --- main map drawing --
+        self.main_map.render_to_target(&world, &self.viewport.top_left());
         
-        // --- map drawing --
-        render_map(
-            &mut self.main_map_target,
-            &world,
-            self.viewport.x1, self.viewport.y1,
-            self.viewport.width(), self.viewport.height(),
-            &self.main_map_render_assets
-        );
-
         // select material (this is just a toy function for testing)
         match self.is_bw {
             false => gl_use_material(self.material_vignette),
@@ -693,67 +502,35 @@ impl MainState {
         //let base = vec2(10.0, 70.0);
         let base = vec2(0.0, 0.0);
         let mut map_size = vec2(0.0, 0.0);
-        let texture = self.main_map_target.texture;
+        let texture = self.main_map.texture();
         map_size = vec2(texture.width(), texture.height());
 
         // EXPERIMENTAL
-        //        draw_texture_ex(texture, base.x, base.y, WHITE,
         // TODO: do we copy the texture here?
-        draw_texture_ex(*self.main_map.texture(), base.x, base.y, WHITE,
-                        DrawTextureParams {
-                            flip_y: true, // this is a temporary workaround
-                            //dest_size: Some(map_size),
-                            dest_size: Some(self.main_map.target_size()),
-                            ..Default::default()
-                        }
-        );
-
-        // EXPERIMENTAL: highlight certain tiles by surrounding
-        // them with a red rectangle
-        if self.draw_fov {
-            let mut points = PointSet::new();
-            let p = world.player_pos();
-            points.insert(p.clone());
-            points.insert(p.clone() + (0, 1).into());
-            points.insert(p.clone() + (0, 2).into());
-            points.insert(p.clone() + (0, -1).into());
-            points.insert(p.clone() + (0, -2).into());
-            points.insert(p.clone() + (1, 0).into());
-            points.insert(p.clone() + (2, 0).into());
-            points.insert(p.clone() + (-1, 0).into());
-            points.insert(p.clone() + (-2, 0).into());
-            points.insert(p.clone() + (-1, -1).into());
-            points.insert(p.clone() + (1, -1).into());
-            points.insert(p.clone() + (-1, 1).into());
-            points.insert(p.clone() + (1, 1).into());
-            for p in points.iter() {
-                let x = (p.x - self.viewport.x1) as f32 * 32.0 + base.x;
-                let y = (p.y - self.viewport.y1) as f32 * 32.0 + base.y;
-                draw_rectangle_lines(x, y, 32.0, 32.0, 4.0, RED);
+        draw_texture_ex(
+            *texture, base.x, base.y, WHITE,
+            DrawTextureParams {
+                flip_y: true, // this is a temporary workaround
+                dest_size: Some(self.main_map.target_size()),
+                ..Default::default()
             }
-        };
+        );
         
         // draw mini map
-        render_map(
-            &mut self.mini_map_target,
-            &world,
-            self.viewport.x1, self.viewport.y1,
-            48,20,
-            &self.mini_map_render_assets
-        );
+        self.mini_map.render_to_target(&world, &self.viewport.top_left());
 
-        let texture = self.mini_map_target.texture;
-        let topleft = base + vec2(
-            screen_width() - self.mini_map_target.texture.width() - 10.0,
+        let texture = self.mini_map.texture();
+        let map_pos = base + vec2(
+            screen_width() - texture.width() - 10.0,
             10.0
-            //screen_height() - mini_map_target.texture.height() - 20.0
         );
         let mini_map_size = vec2(texture.width(), texture.height());
+        // TODO: do we copy the texture here?
         draw_texture_ex(
-            texture, topleft.x, topleft.y, WHITE,
+            *texture, map_pos.x, map_pos.y, WHITE,
             DrawTextureParams {
-                flip_y: true,
-                dest_size: Some(mini_map_size),
+                flip_y: true, // this is a temporary workaround
+                dest_size: Some(self.mini_map.target_size()),
                 ..Default::default()
             }
         );
@@ -822,7 +599,9 @@ async fn main() {
 
         render_and_update_egui(&mut state, &world);
 
-        // update, if necessary
+        // Update, if necessary.
+        // Only update every DELTA_UPDATE intervals.
+        // Do not update, if time since last end of turn is less than DELTA_TURN.
         if !state.egui_has_focus
             && (get_time() - state.last_input > DELTA_UPDATE)
             && (get_time() - state.end_of_turn > DELTA_TURN)
@@ -832,6 +611,7 @@ async fn main() {
         }
 
         state.update(&mut world, &mut actions);
+        state.update_fov(&mut world);
         state.render(&world);
         state.messages.truncate(10);  // flush very old messages
 

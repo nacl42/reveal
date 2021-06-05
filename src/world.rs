@@ -1,5 +1,5 @@
 
-use crate::point::{Point, Rectangle};
+use crate::point::{Point, Rectangle, PointSet};
 use crate::item::{Item, ItemKind, ItemMap, ItemId};
 use crate::actor::{Actor, ActorKind, ActorMap, ActorId};
 use crate::terrain::{Terrain, TerrainKind, TerrainMap, read_terrain_from_file};
@@ -15,6 +15,7 @@ pub struct World {
     pub terrain: TerrainMap,
     player_id: ActorId,
     pub time: i32,
+    pub highlights: PointSet
     //pub tiles: TileMap
 }
 
@@ -29,7 +30,8 @@ impl World {
             items: ItemMap::new(),
             terrain: read_terrain_from_file("assets/sample.layer").unwrap(),
             player_id,
-            time: 0
+            time: 0,
+            highlights: PointSet::new()
             //tiles: TileMap::new(),
         }
     }

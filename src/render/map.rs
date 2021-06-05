@@ -1,5 +1,5 @@
 use crate::world::World;
-use crate::point::{Point, Rectangle};
+use crate::point::{Point, Rectangle, PointSet};
 use crate::render::Tileset;
 use crate::terrain::{Terrain, TerrainKind, TerrainFeature};
 use crate::item::{Item, ItemKind};
@@ -36,7 +36,7 @@ impl Map {
 
     /// Render world onto Map target texture.
     /// As a side-effect, the camera is set to default.
-    pub fn render_to_target(&mut self, world: &World, viewport: &Rectangle) {
+    pub fn render_to_target(&mut self, world: &World, top_left: &Point) {
         // resize target if necessary
         let target_size = self.target_size();
         if (self.target.texture.width () != target_size.x) ||
@@ -56,13 +56,11 @@ impl Map {
         // draw map onto texture
         clear_background(BLACK);
 
-        // TODO: clip viewport if size is larger than texture size
-        
         let dest_size = Some(vec2(self.tile_size.x, self.tile_size.y));
         let mut screen = Vec2::new(0.0, 0.0);
-        for y in viewport.y1..viewport.y2 {
+        for y in top_left.y..top_left.y+self.map_size.y {
             screen.x = 0.0;
-            for x in viewport.x1..viewport.x2 {
+            for x in top_left.x..top_left.x+self.map_size.x {
                 let tile = Point::from((x, y));
 
                 for layer in &self.layers {
@@ -197,6 +195,18 @@ impl ItemRenderer {
         match item.kind {
             ItemKind::Money(_) => 1,
             ItemKind::Wand => 2
+        }
+    }
+}
+
+
+pub struct HighlightRenderer();
+
+impl MapRenderer for HighlightRenderer {
+    #[inline]
+    fn render(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
+        if world.highlights.contains(&world_pos) {
+            draw_rectangle_lines(screen_pos.x, screen_pos.y, tile_size.x, tile_size.y, 2.0, RED);
         }
     }
 }
