@@ -10,29 +10,24 @@ pub struct Map {
     target: RenderTarget,
     tile_size: Vec2,
     tile_sep: Vec2,
-    size_mode: MapSizeMode,
-    render_pipeline: Vec<Box<dyn MapRenderer>>
-}
-
-pub enum MapSizeMode {
-    FixedScreenSize(Vec2),
-    FixedWorldSize(Point)
+    map_size: Point,
+    layers: Vec<Box<dyn MapRenderer>>
 }
 
 
 impl Map {
-    pub fn new(tile_width: f32, tile_height: f32) -> Map {
+    pub fn new(tile_width: f32, tile_height: f32, map_size: Point) -> Map {
         Map {
             target: render_target(0, 0),
             tile_size: vec2(tile_width, tile_height),
             tile_sep: vec2(0.0, 0.0),
-            size_mode: MapSizeMode::FixedWorldSize((40, 30).into()),
-            render_pipeline: vec!()
+            map_size,
+            layers: vec!()
         }
     }
 
-    pub fn add_renderer(&mut self, renderer: Box<dyn MapRenderer>) {
-        self.render_pipeline.push(renderer);
+    pub fn add_layer(&mut self, layer: Box<dyn MapRenderer>) {
+        self.layers.push(layer);
     }
     
     pub fn texture(&self) -> &Texture2D {
@@ -70,9 +65,9 @@ impl Map {
             for x in viewport.x1..viewport.x2 {
                 let tile = Point::from((x, y));
 
-                for renderer in &self.render_pipeline {
+                for layer in &self.layers {
                     // TODO: maybe don't pass references
-                    renderer.render(&world, &tile, &screen, &self.tile_size);
+                    layer.render(&world, &tile, &screen, &self.tile_size);
                 }
                 
                 screen.x += self.tile_size.x + self.tile_sep.x;
@@ -84,17 +79,11 @@ impl Map {
         set_default_camera();
     }
 
-    /// derive actual target texture size from size mode
+    /// derive actual target texture size (in pixel) from `map_size`
+    /// (in tiles)
     pub fn target_size(&self) -> Vec2 {
-        match self.size_mode {
-            MapSizeMode::FixedScreenSize(screen_size) => screen_size,
-            MapSizeMode::FixedWorldSize(world_size) => {
-                vec2(
-                    (world_size.x as f32 * (self.tile_size.x + self.tile_sep.x)),
-                    (world_size.y as f32 * (self.tile_size.y + self.tile_sep.y))
-                )
-            }
-        }
+        vec2((self.map_size.x as f32 * (self.tile_size.x + self.tile_sep.x)),
+             (self.map_size.y as f32 * (self.tile_size.y + self.tile_sep.y)))
     }
 
     pub fn render_target(&self) -> RenderTarget {

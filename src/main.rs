@@ -514,27 +514,25 @@ impl MainState {
             tileset_actors: None
         };
 
+        let vw = (screen_width()/(width as f32)) as i32;
+        let vh = (screen_height()/(height as f32)) as i32;
+        let viewport = Rectangle::from((0, 0, vw, vh));
+
         // EXPERIMENTAL
-        let mut main_map = Map::new(32.0, 32.0);
-        main_map.add_renderer(Box::new(TerrainRenderer {
+        let mut main_map = Map::new(32.0, 32.0, Point::new(vw, vh));
+        main_map.add_layer(Box::new(TerrainRenderer {
             terrains: Tileset::new("assets/terrain32.png", &pattern).await.unwrap(),
             features: Tileset::new("assets/features32.png", &pattern).await.unwrap(),
         }));
-        main_map.add_renderer(Box::new(ItemRenderer {
+        main_map.add_layer(Box::new(ItemRenderer {
             tileset: Tileset::new("assets/items32.png", &pattern).await.unwrap()
         }));
-        main_map.add_renderer(Box::new(ActorRenderer {
+        main_map.add_layer(Box::new(ActorRenderer {
             tileset: Tileset::new("assets/actors32.png", &pattern).await.unwrap()
         }));
 
         //let mut mini_map = Map::new(2.0, 2.0);
         
-
-        let (vh, vw) = (
-            (screen_height()/(height as f32)) as i32,
-            (screen_width()/(width as f32)) as i32
-        );
-
         let material_vignette = load_material(
             CRT_VERTEX_SHADER,
             CRT_FRAGMENT_SHADER,
@@ -556,7 +554,7 @@ impl MainState {
             show_help: true,
             show_status: true,
             draw_fov: false,
-            viewport: Rectangle::from((0, 0, vw, vh)),
+            viewport,
             border_size: Point::from((10, 10)),
             messages: VecDeque::new(),
             egui_has_focus: false,
