@@ -2,7 +2,6 @@ use macroquad::prelude::*;
 
 mod actor;
 mod effect;
-mod tileset;
 mod terrain;
 mod point;
 mod item;
@@ -11,9 +10,9 @@ mod flake;
 mod id;
 mod idmap;
 mod action;
+mod render;
 
 use effect::{TextEffect, ScaleText};
-use tileset::{Tileset, Pattern};
 use terrain::{TerrainKind, Terrain, TerrainFeature, TerrainMap};
 use actor::{Actor, ActorId}; //, ActorKind, ActorId, ActorMap};
 use point::{Point, Rectangle, PointSet};
@@ -21,6 +20,7 @@ use item::{ItemKind}; //ItemId, Item, ItemKind, ItemMap};
 use world::{World, ViewportMode, adjust_viewport};
 use item::Item;
 use action::{Action, GuiAction};
+use render::{Map, Tileset, Pattern, TerrainRenderer, ItemRenderer, ActorRenderer};
 
 use std::collections::{VecDeque};
 
@@ -42,6 +42,7 @@ fn window_conf() -> Conf {
 }
 
 
+// TBR
 fn terrain_class_index(tile: &Terrain) -> usize {
     match tile.kind {
         TerrainKind::Grass => 1,
@@ -60,6 +61,7 @@ fn terrain_class_index(tile: &Terrain) -> usize {
     }
 }
 
+// TBR
 fn terrain_feature_index(tile: &Terrain) -> Option<usize> {
     if let Some(feature) = &tile.feature {
         let index = match feature {
@@ -97,20 +99,22 @@ fn render_map(target: &mut RenderTarget,
               tiles_x: i32, tiles_y: i32,
               assets: &MapRenderAssets)
 {
-    let sep = vec2(0.0, 0.0);
+    let sep = vec2(1.0, 1.0);  // TBR
         
-    // render target for map drawing
+    // render target for map drawing   // TBR
     let map_size = vec2(
         (tiles_x as f32 * (assets.tile_width + sep.x)) as f32,
         (tiles_y as f32 * (assets.tile_height + sep.y)) as f32
     );
 
+    // TBR
     if (target.texture.width() != map_size.x) ||
         (target.texture.height() != map_size.y) {
             *target = render_target(map_size.x as u32, map_size.y as u32);
         }
     target.texture.set_filter(FilterMode::Nearest);
 
+    // TBR
     // set camera, so that drawing operations act
     // on the texture
     let mut camera = Camera2D::from_display_rect(
@@ -118,6 +122,7 @@ fn render_map(target: &mut RenderTarget,
     camera.render_target = Some(*target);
     set_camera(&camera);
 
+    // TBR
     // draw map onto texture
     clear_background(BLACK);
 
@@ -211,6 +216,8 @@ fn render_map(target: &mut RenderTarget,
         }
         py += assets.tile_height + sep.y;
     }
+
+    // TBR
     // draw texture on screen
     set_default_camera();
 }
@@ -236,7 +243,8 @@ struct MainState {
     params: TextParams,
     params_info: TextParams,
     main_map_render_assets: MapRenderAssets,
-    mini_map_render_assets: MapRenderAssets
+    mini_map_render_assets: MapRenderAssets,
+    main_map: Map,
 }
 
 
@@ -472,11 +480,11 @@ impl MainState {
         };
 
         // the map render target will be initialised in the main loop
-        let main_map_target = render_target(0, 0);
-        let mini_map_target = render_target(0, 0);
+        let main_map_target = render_target(0, 0); // TBR
+        let mini_map_target = render_target(0, 0); // TBR
         
-        let (width, height) = (32.0, 32.0);
-        let pattern = Pattern::Matrix {
+        let (width, height) = (32.0, 32.0); // TBR
+        let pattern = Pattern::Matrix { // KEEP
             width, height,
             columns: 10, rows: 10
         };
@@ -500,13 +508,27 @@ impl MainState {
         let mini_map_render_assets = MapRenderAssets {
             tile_width: 4.0,
             tile_height: 4.0,
-            tileset_terrain: Tileset::new(
-            "assets/terrain32.png", &pattern
-            ).await.ok(),
+            tileset_terrain: Tileset::new("assets/terrain32.png", &pattern).await.ok(),
             tileset_features: None,
             tileset_items: None,
             tileset_actors: None
         };
+
+        // EXPERIMENTAL
+        let mut main_map = Map::new(32.0, 32.0);
+        main_map.add_renderer(Box::new(TerrainRenderer {
+            terrains: Tileset::new("assets/terrain32.png", &pattern).await.unwrap(),
+            features: Tileset::new("assets/features32.png", &pattern).await.unwrap(),
+        }));
+        main_map.add_renderer(Box::new(ItemRenderer {
+            tileset: Tileset::new("assets/items32.png", &pattern).await.unwrap()
+        }));
+        main_map.add_renderer(Box::new(ActorRenderer {
+            tileset: Tileset::new("assets/actors32.png", &pattern).await.unwrap()
+        }));
+
+        //let mut mini_map = Map::new(2.0, 2.0);
+        
 
         let (vh, vw) = (
             (screen_height()/(height as f32)) as i32,
@@ -546,6 +568,7 @@ impl MainState {
             params_info,
             main_map_render_assets,
             mini_map_render_assets,
+            main_map
         };
 
         Ok(state)
@@ -651,6 +674,9 @@ impl MainState {
     fn render(&mut self, world: &World) {
         clear_background(BLACK);
 
+        // EXPERIMENTAL
+        self.main_map.render_to_target(&world, &self.viewport);
+        
         // --- map drawing --
         render_map(
             &mut self.main_map_target,
@@ -672,10 +698,14 @@ impl MainState {
         let texture = self.main_map_target.texture;
         map_size = vec2(texture.width(), texture.height());
 
-        draw_texture_ex(texture, base.x, base.y, WHITE,
+        // EXPERIMENTAL
+        //        draw_texture_ex(texture, base.x, base.y, WHITE,
+        // TODO: do we copy the texture here?
+        draw_texture_ex(*self.main_map.texture(), base.x, base.y, WHITE,
                         DrawTextureParams {
                             flip_y: true, // this is a temporary workaround
-                            dest_size: Some(map_size),
+                            //dest_size: Some(map_size),
+                            dest_size: Some(self.main_map.target_size()),
                             ..Default::default()
                         }
         );

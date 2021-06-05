@@ -52,12 +52,25 @@ impl Tileset {
                 }
             }
         }
-
+            
         Ok(
             Tileset {
                 texture,
-                sources
+                sources,
             }
         )
+    }
+
+    #[inline]
+    pub fn render(&self, index: usize, at: Vec2, dest_size: Vec2) {
+        if let Some(&source) = self.sources.get(index) {
+            draw_texture_ex(self.texture, at.x, at.y, WHITE,
+                            DrawTextureParams {
+                                dest_size: Some(dest_size),
+                                source: Some(source),
+                                ..Default::default()
+                            }
+            );
+        };
     }
 }
