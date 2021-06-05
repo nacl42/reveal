@@ -470,6 +470,12 @@ impl MainState {
         let p = world.player_pos();
         let points = &mut world.highlights;
         points.clear();
+
+        let pos = Vec2::from(mouse_position()) - vec2(0.0, 0.0); // - map offset
+        if let Some(map_pos) = self.main_map.screen_to_tile(&pos) {
+            points.insert(map_pos + self.viewport.top_left());
+        }
+        
         if self.draw_fov {
             points.insert(p.clone());
             points.insert(p.offset(0, 1));

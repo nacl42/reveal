@@ -26,6 +26,16 @@ impl Map {
         }
     }
 
+    pub fn screen_to_tile(&self, screen: &Vec2) -> Option<Point> {
+        let tx = screen.x / (self.tile_size.x+ self.tile_sep.x);
+        let ty = screen.y / (self.tile_size.y + self.tile_sep.y);
+        if (tx < 0.0) || (ty < 0.0) || (tx > self.tile_size.x) || (ty > self.tile_size.y) {
+            None
+        } else {
+            Some(Point::new(tx as i32, ty as i32))
+        }
+    }
+    
     pub fn add_layer(&mut self, layer: Box<dyn MapRenderer>) {
         self.layers.push(layer);
     }
@@ -206,7 +216,7 @@ impl MapRenderer for HighlightRenderer {
     #[inline]
     fn render(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
         if world.highlights.contains(&world_pos) {
-            draw_rectangle_lines(screen_pos.x, screen_pos.y, tile_size.x, tile_size.y, 2.0, RED);
+            draw_rectangle_lines(screen_pos.x, screen_pos.y, tile_size.x, tile_size.y, 4.0, RED);
         }
     }
 }
