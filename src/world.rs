@@ -2,7 +2,7 @@
 use crate::point::{Point, Rectangle, PointSet};
 use crate::item::{Item, ItemMap, ItemId};
 use crate::actor::{Actor, ActorMap, ActorId};
-use crate::terrain::{Terrain, TerrainMap};
+use crate::terrain::{self, Terrain, TerrainMap};
 use crate::action::Action;
 
 use crate::game::*;
@@ -32,7 +32,7 @@ impl World {
         Self {
             actors,
             items: ItemMap::new(),
-            terrain: read_terrain_from_file("assets/sample.layer").unwrap(),
+            terrain: TerrainMap::new(),
             player_id,
             time: 0,
             highlight_mode: HighlightMode::None,
@@ -41,7 +41,25 @@ impl World {
         }
     }
 
-    pub fn populate_world(&mut self) {        
+    pub fn populate_world(&mut self) {
+        // read map from file
+        let map = hashmap! {
+            '.' => TerrainKind::Grass,
+            '*' => TerrainKind::Hedge,
+            ':' => TerrainKind::StoneFloor,
+            'P' => TerrainKind::Path,
+            ';' => TerrainKind::ThickGrass,
+            'W' => TerrainKind::Water,
+            '#' => TerrainKind::Wall,
+            '~' => TerrainKind::ShallowWater,
+            'D' => TerrainKind::Door(DoorState::Open),
+            '+' => TerrainKind::Window,
+            'B' => TerrainKind::Bridge(Orientation::Vertical),
+            'b' => TerrainKind::Bridge(Orientation::Horizontal),
+        };
+
+        self.terrain = terrain::read_from_file("assets/sample.layer", &map).unwrap();
+
         // item map (just an example)
         let item1 = Item::new(ItemKind::Money(10)).with_pos((5, 6));
         let item2 = Item::new(ItemKind::Wand).with_pos((12, 10));
@@ -235,47 +253,3 @@ pub enum HighlightMode {
 
 
 
-// TODO: this should be moved somewhere else, it contains game-specific
-// informatin (the mapping)
-#[allow(unused_assignments)]
-pub fn read_terrain_from_file<P>(path: P)
-                                 -> Result<TerrainMap, std::io::Error>
-where P: AsRef<std::path::Path>
-{
-    let text: String = std::fs::read_to_string(path)?;
-
-    let map = hashmap! {
-        '.' => TerrainKind::Grass, // 0
-        '*' => TerrainKind::Hedge, //5,
-        ':' => TerrainKind::StoneFloor, // 7,
-        'P' => TerrainKind::Path, //1,
-        ';' => TerrainKind::ThickGrass, //6,
-        'W' => TerrainKind::Water, //2,
-        '#' => TerrainKind::Wall, //3,
-        '~' => TerrainKind::ShallowWater, //8,
-        'D' => TerrainKind::Door(DoorState::Open), //10,
-        '+' => TerrainKind::Window, //11,
-        'B' => TerrainKind::Bridge(Orientation::Vertical),
-        'b' => TerrainKind::Bridge(Orientation::Horizontal),
-    };
-
-    let mut x = 0;
-    let mut y = 0;
-    let mut hashmap = TerrainMap::new();
-    let mut rng = rand::thread_rng();
-    for row in text.lines() {
-        x = 0;
-        for ch in row.chars() {
-            if let Some(kind) = map.get(&ch) {
-                let mut terrain = Terrain::from(kind);
-                if rng.gen::<f32>() > 0.95 {
-                    terrain.set_random_decor();
-                }
-                hashmap.insert((x, y).into(), terrain);
-            }
-            x += 1;
-        }
-        y += 1;
-    }
-    return Ok(hashmap);    
-}
