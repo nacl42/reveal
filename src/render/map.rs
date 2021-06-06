@@ -2,9 +2,11 @@ use crate::world::{World, HighlightMode};
 use crate::point::{Point, Rectangle, PointSet};
 use crate::render::Tileset;
 use crate::terrain::{Terrain, TerrainKind, TerrainFeature, Orientation};
-use crate::item::{Item, ItemKind};
+use crate::item::{Item};
 use crate::actor::{Actor, ActorKind};
 use crate::game::tile_index::{terrain_index, feature_index, item_index, actor_index};
+
+use crate::game::*;
 
 use macroquad::prelude::*;
 

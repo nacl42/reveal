@@ -1,6 +1,7 @@
 use crate::point::Point;
 use crate::actor::{ActorId};
 use crate::idmap::{Id, IdMap};
+use crate::game::ItemKind;
 
 pub type ItemId = Id<Item>;
 pub type ItemMap = IdMap<Item>;
@@ -35,15 +36,6 @@ impl Item {
     }
 
     pub fn description(&self) -> String {
-        match self.kind {
-            ItemKind::Wand => String::from("a magical wand"),
-            ItemKind::Money(x) => format!("{} coins of gold", x)
-        }
+        self.kind.description()
     }
-}
-
-#[derive(Debug, Clone)]
-pub enum ItemKind {
-    Money(u32),
-    Wand,
 }

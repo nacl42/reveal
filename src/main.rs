@@ -16,11 +16,12 @@ use effect::{TextEffect, ScaleText};
 use terrain::{TerrainKind, Terrain, TerrainFeature, TerrainMap};
 use actor::{Actor, ActorId}; //, ActorKind, ActorId, ActorMap};
 use point::{Point, Rectangle, PointSet};
-use item::{ItemKind}; //ItemId, Item, ItemKind, ItemMap};
 use world::{World, ViewportMode, adjust_viewport};
 use item::Item;
 use action::{Action, GuiAction};
 use render::{Map, Tileset, Pattern, TerrainLayer, ItemLayer, ActorLayer, HighlightLayer};
+
+use game::*;
 
 use std::collections::{VecDeque};
 
@@ -307,7 +308,7 @@ impl MainState {
         // enabled. An issue has been filed.
         let vw = (screen_width()/(width as f32)) as i32;
         let vh = (screen_height()/(height as f32)) as i32;
-        let viewport = Rectangle::from((0, 0, vw, vh));
+        let viewport = Rectangle::from((0, 0, vw, vh-3));
 
         let mut main_map = Map::new(width, height, Point::new(vw, vh));
         main_map.add_layer(Box::new(TerrainLayer {
@@ -506,7 +507,7 @@ impl MainState {
         };
 
         //let base = vec2(10.0, 70.0);
-        let base = vec2(0.0, 0.0);
+        let base = vec2(0.0, 32.0);
         let mut map_size = vec2(0.0, 0.0);
         let texture = self.main_map.texture();
         map_size = vec2(texture.width(), texture.height());

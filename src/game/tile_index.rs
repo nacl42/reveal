@@ -2,8 +2,10 @@
 //! and their corresponding index in the tilesets.
 //!
 
+use super::ItemKind;
+
 use crate::actor::{Actor, ActorKind};
-use crate::item::{Item, ItemKind};
+use crate::item::{Item};
 use crate::terrain::{Terrain, TerrainKind, Orientation};
 use crate::terrain::{TerrainFeature};
 

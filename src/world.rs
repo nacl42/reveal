@@ -1,9 +1,10 @@
 
 use crate::point::{Point, Rectangle, PointSet};
-use crate::item::{Item, ItemKind, ItemMap, ItemId};
+use crate::item::{Item, ItemMap, ItemId};
 use crate::actor::{Actor, ActorKind, ActorMap, ActorId};
 use crate::terrain::{Terrain, TerrainKind, TerrainMap, read_terrain_from_file};
 use crate::action::Action;
+use crate::game::*;
 
 use std::collections::HashMap;
 
