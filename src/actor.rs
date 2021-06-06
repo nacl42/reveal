@@ -8,6 +8,7 @@ use crate::id::Id;
 pub struct Actor {
     pub kind: ActorKind,
     pub pos: Point,
+    pub ai: Option<ActorAI>,
     pub inventory: Vec<ItemId>
 }
 
@@ -18,6 +19,7 @@ impl Actor {
         Self {
             kind,
             pos: pos.into(),
+            ai: None,
             inventory: Vec::new()
         }
     }
@@ -32,8 +34,12 @@ pub enum ActorKind {
     Townsfolk,
 }
 
-//#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
-//pub struct ActorId(pub u64);
+
+#[derive(Debug, Clone)]
+pub enum ActorAI {
+    DoNothing,
+    WanderAround,
+}
 
 pub type ActorId = Id<Actor>;
 pub type ActorMap = IdMap<Actor>;

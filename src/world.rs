@@ -5,8 +5,9 @@ use crate::actor::{Actor, ActorKind, ActorMap, ActorId};
 use crate::terrain::{Terrain, TerrainKind, TerrainMap, read_terrain_from_file};
 use crate::action::Action;
 
-//use crate::idmap::{IdMap};
-//use crate::tile::TileMap;
+use std::collections::HashMap;
+
+use rand::Rng;
 
 #[derive(Debug)]
 pub struct World {
@@ -55,6 +56,42 @@ impl World {
         let player = self.actors.get_mut(&self.player_id).unwrap();
         player.inventory.push(id3);
         player.inventory.push(id4);
+
+        // add random players
+
+        // TODO: choose random tile
+        // TODO: check if tile is occupied
+        // do we need some kind of index for the actor position here?
+        let actor_positions = self.actors.iter()
+            .map(|(id, actor)| (actor.pos.clone(), id.clone()))
+            .collect::<HashMap<Point, ActorId>>();
+
+        dbg!(&actor_positions);
+
+        // spawn some random NPCs
+        let MAX_NPC: u32 = 5;
+        
+        let mut slots = self.terrain.iter()
+            .filter(|(pos, tile)| tile.kind == TerrainKind::StoneFloor
+                    && !actor_positions.contains_key(*pos))
+            .map(|(pos, tile)| pos)
+            .collect::<Vec<&Point>>();
+
+        let mut rng = rand::thread_rng();
+        for _ in 0..MAX_NPC {
+            let len = slots.len();
+            if len == 0 {
+                break;
+            }
+            let index = rng.gen_range(0..len);
+            let actor_pos = slots[index];
+            let new_actor = Actor::new(
+                ActorKind::Townsfolk,
+                actor_pos.clone()
+            );
+            self.actors.add(new_actor);
+            slots.remove(index);
+        }
     }
 
     

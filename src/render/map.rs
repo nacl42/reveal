@@ -3,6 +3,7 @@ use crate::point::{Point, Rectangle, PointSet};
 use crate::render::Tileset;
 use crate::terrain::{Terrain, TerrainKind, TerrainFeature, Orientation};
 use crate::item::{Item, ItemKind};
+use crate::actor::{Actor, ActorKind};
 
 use macroquad::prelude::*;
 
@@ -176,16 +177,27 @@ impl TerrainRenderer {
 impl MapRenderer for ActorRenderer {
     #[inline]
     fn render(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
-        for _ in world.actors.iter()
+        for (_, actor) in world.actors.iter()
             .filter(|(_, actor)| actor.pos == *world_pos) {
-                let index = 2; // TODO: get index from actor
+                let index = self.tile_index(&actor);
                 if let Some(&source) = self.tileset.sources.get(index) {
                     self.tileset.render(index, *screen_pos, *tile_size);
                 }
             }
     }
 }
-    
+
+impl ActorRenderer {
+    #[inline]
+    fn tile_index(&self, actor: &Actor) -> usize {
+        match actor.kind {
+            ActorKind::Player => 2,
+            ActorKind::Townsfolk => 3,
+            _ => 1
+        }
+    }
+}
+
 impl MapRenderer for ItemRenderer {
     #[inline]
     fn render(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {

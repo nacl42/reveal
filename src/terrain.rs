@@ -57,7 +57,7 @@ impl From<&TerrainKind> for Terrain {
 
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TerrainKind {
     Empty,
     Grass,
@@ -74,11 +74,11 @@ pub enum TerrainKind {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Orientation { Horizontal, Vertical }
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum DoorState { Open, Closed, Locked }
 
 #[allow(dead_code)]
