@@ -2,12 +2,11 @@
 //! and their corresponding index in the tilesets.
 //!
 
-use super::{ActorKind, ItemKind};
+use super::{ActorKind, ItemKind, TerrainKind, TerrainFeature, Orientation, DoorState};
 
 use crate::actor::{Actor};
 use crate::item::{Item};
-use crate::terrain::{Terrain, TerrainKind, Orientation};
-use crate::terrain::{TerrainFeature};
+use crate::terrain::{Terrain};
 
 pub fn terrain_index(tile: &Terrain) -> usize {
     match tile.kind {

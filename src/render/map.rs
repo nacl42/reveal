@@ -1,7 +1,7 @@
 use crate::world::{World, HighlightMode};
 use crate::point::{Point, Rectangle, PointSet};
 use crate::render::Tileset;
-use crate::terrain::{Terrain, TerrainKind, TerrainFeature, Orientation};
+use crate::terrain::{Terrain};
 use crate::item::{Item};
 use crate::actor::Actor;
 use crate::game::tile_index::{terrain_index, feature_index, item_index, actor_index};

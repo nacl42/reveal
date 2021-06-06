@@ -13,7 +13,7 @@ mod render;
 mod game;
 
 use effect::{TextEffect, ScaleText};
-use terrain::{TerrainKind, Terrain, TerrainFeature, TerrainMap};
+use terrain::{Terrain, TerrainMap};
 use actor::{Actor, ActorId};
 use point::{Point, Rectangle, PointSet};
 use world::{World, ViewportMode, adjust_viewport};
@@ -24,6 +24,7 @@ use render::{Map, Tileset, Pattern, TerrainLayer, ItemLayer, ActorLayer, Highlig
 use game::*;
 
 use std::collections::{VecDeque};
+
 
 const CRT_FRAGMENT_SHADER: &'static str = include_str!("shaders/vignette_fragment.glsl");
 const CRT_VERTEX_SHADER: &'static str = include_str!("shaders/vignette_vertex.glsl");
