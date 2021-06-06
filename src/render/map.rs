@@ -4,6 +4,7 @@ use crate::render::Tileset;
 use crate::terrain::{Terrain, TerrainKind, TerrainFeature, Orientation};
 use crate::item::{Item, ItemKind};
 use crate::actor::{Actor, ActorKind};
+use crate::game::tile_index::{terrain_index, feature_index, item_index, actor_index};
 
 use macroquad::prelude::*;
 
@@ -134,11 +135,11 @@ impl MapLayer for TerrainLayer {
     fn render_tile(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
         if let Some(terrain) = world.terrain.get(&world_pos) {
             // draw terrain base tile
-            let index = self.terrain_index(&terrain);
+            let index = terrain_index(&terrain);
             self.terrains.render(index, *screen_pos, *tile_size);
 
             // draw terrain features
-            if let Some(index) = self.feature_index(&terrain) {
+            if let Some(index) = feature_index(&terrain) {
                 if let Some(&source) = self.features.sources.get(index) {
                     self.features.render(index, *screen_pos, *tile_size);
                 }
@@ -147,49 +148,13 @@ impl MapLayer for TerrainLayer {
     }    
 }
 
-impl TerrainLayer {
-    fn terrain_index(&self, tile: &Terrain) -> usize {
-        match tile.kind {
-            TerrainKind::Grass => 1,
-            TerrainKind::Path => 2,
-            TerrainKind::Water => 3,
-            TerrainKind::Wall => 4,
-            //Sand => 5,
-            TerrainKind::Hedge => 6,
-            TerrainKind::ThickGrass => 10,
-            TerrainKind::StoneFloor => 11,
-            TerrainKind::ShallowWater => 12,
-            // Grate => 13,
-            TerrainKind::Door(_) => 14,
-            TerrainKind::Window => 15,
-            TerrainKind::Bridge(Orientation::Vertical) => 16,
-            TerrainKind::Bridge(Orientation::Horizontal) => 17, // TODO
-            _ => 0,
-        }
-    }
-
-    fn feature_index(&self, tile: &Terrain) -> Option<usize> {
-        if let Some(feature) = &tile.feature {
-            let index = match feature {
-                TerrainFeature::Mushroom => 20,
-                TerrainFeature::Flower(n) => (40 + (n % 4) as usize),
-                TerrainFeature::Stones => 10,
-                TerrainFeature::Waterlily => 30
-            };
-            Some(index)
-        } else {
-            None
-        }
-    }
-}
-
 
 impl MapLayer for ActorLayer {
     #[inline]
     fn render_tile(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
         for (_, actor) in world.actors.iter()
             .filter(|(_, actor)| actor.pos == *world_pos) {
-                let index = self.tile_index(&actor);
+                let index = actor_index(&actor);
                 if let Some(&source) = self.tileset.sources.get(index) {
                     self.tileset.render(index, *screen_pos, *tile_size);
                 }
@@ -197,16 +162,6 @@ impl MapLayer for ActorLayer {
     }
 }
 
-impl ActorLayer {
-    #[inline]
-    fn tile_index(&self, actor: &Actor) -> usize {
-        match actor.kind {
-            ActorKind::Player => 2,
-            ActorKind::Townsfolk => 3,
-            _ => 1
-        }
-    }
-}
 
 impl MapLayer for ItemLayer {
     #[inline]
@@ -214,21 +169,11 @@ impl MapLayer for ItemLayer {
         for item_id in world.item_ids_at(&world_pos) {
             let mut tileset_index = 0;
             if let Some(item) = world.items.get(&item_id) {
-                let index = self.item_index(&item);
+                let index = item_index(&item);
                 if let Some(&source) = self.tileset.sources.get(index) {
                     self.tileset.render(index, *screen_pos, *tile_size);
                 }
             }
-        }
-    }
-}
-
-
-impl ItemLayer {
-    pub fn item_index(&self, item: &Item) -> usize {
-        match item.kind {
-            ItemKind::Money(_) => 1,
-            ItemKind::Wand => 2
         }
     }
 }

@@ -11,6 +11,7 @@ mod id;
 mod idmap;
 mod action;
 mod render;
+mod game;
 
 use effect::{TextEffect, ScaleText};
 use terrain::{TerrainKind, Terrain, TerrainFeature, TerrainMap};
