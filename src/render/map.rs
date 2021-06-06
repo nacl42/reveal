@@ -184,6 +184,27 @@ impl MapLayer for ItemLayer {
 pub struct HighlightLayer();
 
 impl MapLayer for HighlightLayer {
+    fn render(&self, world: &World, viewport: &Rectangle,
+              tile_size: &Vec2, tile_sep: &Vec2)
+    {
+        match world.highlight_mode {
+            Some(HighlightMode::FOV) => {
+                let mut screen = Vec2::new(0.0, 0.0);
+                for y in viewport.y1..viewport.y2 {
+                    screen.x = 0.0;
+                    for x in viewport.x1..viewport.x2 {
+                        let tile = Point::from((x, y));
+                        self.render_tile(&world, &tile, &screen, &tile_size);
+                        screen.x += tile_size.x + tile_sep.x;
+                    }
+                    screen.y += tile_size.y + tile_sep.y;
+                }
+            },
+            _ => {}
+        }
+    }
+    
+
     #[inline]
     fn render_tile(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
         if world.highlights.contains(&world_pos) {

@@ -16,7 +16,7 @@ use effect::{TextEffect, ScaleText};
 use terrain::{Terrain, TerrainMap};
 use actor::{Actor, ActorId};
 use point::{Point, Rectangle, PointSet};
-use world::{World, ViewportMode, adjust_viewport};
+use world::{World, ViewportMode, adjust_viewport, HighlightMode};
 use item::Item;
 use action::{Action, GuiAction};
 use render::{Map, Tileset, Pattern, TerrainLayer, ItemLayer, ActorLayer, HighlightLayer};
@@ -53,7 +53,6 @@ struct MainState {
     show_inventory: bool,
     show_help: bool,
     show_status: bool,
-    draw_fov: bool,
     viewport: Rectangle,
     border_size: Point,
     messages: VecDeque<String>,
@@ -353,7 +352,6 @@ impl MainState {
             show_inventory: true,
             show_help: true,
             show_status: true,
-            draw_fov: false,
             viewport,
             border_size: Point::from((10, 10)),
             messages: VecDeque::new(),
@@ -460,7 +458,11 @@ impl MainState {
                     self.show_status = !self.show_status;
                 },
                 Action::GUI(GuiAction::HideShowFOV) => {
-                    self.draw_fov = !self.draw_fov;
+                    if world.highlight_mode.is_none() {
+                        world.highlight_mode = Some(HighlightMode::FOV);
+                    } else {
+                        world.highlight_mode = None;
+                    }
                 }
             }
         }
@@ -473,12 +475,13 @@ impl MainState {
         let points = &mut world.highlights;
         points.clear();
 
-        let pos = Vec2::from(mouse_position()) - vec2(0.0, 0.0); // - map offset
+        // TODO: use map offset, not arbitrary number
+        let pos = Vec2::from(mouse_position()) - vec2(0.0, 32.0); // - map offset
         if let Some(map_pos) = self.main_map.screen_to_tile(&pos) {
             points.insert(map_pos + self.viewport.top_left());
         }
         
-        if self.draw_fov {
+        if true {
             points.insert(p.clone());
             points.insert(p.offset(0, 1));
             points.insert(p.offset(0, 2));

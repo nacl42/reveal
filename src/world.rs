@@ -18,7 +18,7 @@ pub struct World {
     pub terrain: TerrainMap,
     player_id: ActorId,
     pub time: i32,
-    pub highlight_mode: HighlightMode,
+    pub highlight_mode: Option<HighlightMode>,
     pub highlights: PointSet
     //pub tiles: TileMap
 }
@@ -35,81 +35,12 @@ impl World {
             terrain: TerrainMap::new(),
             player_id,
             time: 0,
-            highlight_mode: HighlightMode::None,
+            highlight_mode: None,
             highlights: PointSet::new()
             //tiles: TileMap::new(),
         }
     }
 
-    pub fn populate_world(&mut self) {
-        // read map from file
-        let map = hashmap! {
-            '.' => TerrainKind::Grass,
-            '*' => TerrainKind::Hedge,
-            ':' => TerrainKind::StoneFloor,
-            'P' => TerrainKind::Path,
-            ';' => TerrainKind::ThickGrass,
-            'W' => TerrainKind::Water,
-            '#' => TerrainKind::Wall,
-            '~' => TerrainKind::ShallowWater,
-            'D' => TerrainKind::Door(DoorState::Open),
-            '+' => TerrainKind::Window,
-            'B' => TerrainKind::Bridge(Orientation::Vertical),
-            'b' => TerrainKind::Bridge(Orientation::Horizontal),
-        };
-
-        self.terrain = terrain::read_from_file("assets/sample.layer", &map).unwrap();
-
-        // item map (just an example)
-        let item1 = Item::new(ItemKind::Money(10)).with_pos((5, 6));
-        let item2 = Item::new(ItemKind::Wand).with_pos((12, 10));
-        self.items.add(item1);
-        self.items.add(item2);
-
-        let item3 = Item::new(ItemKind::Wand).with_owner(self.player_id);
-        let id3 = self.items.add(item3);
-
-        let item4 = Item::new(ItemKind::Money(42)).with_owner(self.player_id);
-        let id4 = self.items.add(item4);
-
-        let item5 = Item::new(ItemKind::Wand).with_pos((5, 6));
-        self.items.add(item5);
-        
-        let player = self.actors.get_mut(&self.player_id).unwrap();
-        player.inventory.push(id3);
-        player.inventory.push(id4);
-
-        // spawn some random NPCs
-
-        // TODO: this is some sort of index which could be kept up-to-date
-        let actor_positions = self.actors.iter()
-            .map(|(id, actor)| (actor.pos.clone(), id.clone()))
-            .collect::<HashMap<Point, ActorId>>();
-
-        let max_npc: u32 = 5;
-        
-        let mut slots = self.terrain.iter()
-            .filter(|(pos, tile)| tile.kind == TerrainKind::StoneFloor
-                    && !actor_positions.contains_key(*pos))
-            .map(|(pos, tile)| pos)
-            .collect::<Vec<&Point>>();
-
-        let mut rng = rand::thread_rng();
-        for _ in 0..max_npc {
-            let len = slots.len();
-            if len == 0 {
-                break;
-            }
-            let index = rng.gen_range(0..len);
-            let actor_pos = slots[index];
-            let new_actor = Actor::new(
-                ActorKind::Townsfolk,
-                actor_pos.clone()
-            );
-            self.actors.add(new_actor);
-            slots.remove(index);
-        }
-    }
 
     
     pub fn player_id(&self) -> ActorId {
@@ -245,7 +176,6 @@ pub fn pick_up_items(world: &World, actor_id: &ActorId, pos: Point) -> Action
 
 #[derive(Debug, Clone)]
 pub enum HighlightMode {
-    None,
     Inspect,
     Line,
     FOV
