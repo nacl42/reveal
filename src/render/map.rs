@@ -12,7 +12,7 @@ pub struct Map {
     tile_size: Vec2,
     tile_sep: Vec2,
     map_size: Point,
-    layers: Vec<Box<dyn MapRenderer>>
+    layers: Vec<Box<dyn MapLayer>>
 }
 
 
@@ -37,7 +37,7 @@ impl Map {
         }
     }
     
-    pub fn add_layer(&mut self, layer: Box<dyn MapRenderer>) {
+    pub fn add_layer(&mut self, layer: Box<dyn MapLayer>) {
         self.layers.push(layer);
     }
     
@@ -67,21 +67,12 @@ impl Map {
         // draw map onto texture
         clear_background(BLACK);
 
-        let dest_size = Some(vec2(self.tile_size.x, self.tile_size.y));
-        let mut screen = Vec2::new(0.0, 0.0);
-        for y in top_left.y..top_left.y+self.map_size.y {
-            screen.x = 0.0;
-            for x in top_left.x..top_left.x+self.map_size.x {
-                let tile = Point::from((x, y));
-
-                for layer in &self.layers {
-                    // TODO: maybe don't pass references
-                    layer.render(&world, &tile, &screen, &self.tile_size);
-                }
-                
-                screen.x += self.tile_size.x + self.tile_sep.x;
-            }
-            screen.y += self.tile_size.y + self.tile_sep.y;
+        let viewport = Rectangle::from(
+            (top_left.x, top_left.y, self.map_size.x, self.map_size.y)
+        );
+        
+        for layer in &self.layers {
+            layer.render(&world, &viewport, &self.tile_size, &self.tile_sep);
         }
         
         // reset camera
@@ -100,28 +91,47 @@ impl Map {
     }
 }
 
+/// A Map consists of multiple MapLayer objects.  Each MapLayer is
+/// rendered using the `render` method, which by default calls
+/// `render_tile` for each and every tile.  Therefore, it is only
+/// necessary to implement `render_tile`. For more complex rendering
+/// tasks, you can override the `render` method itself.
+pub trait MapLayer {
+    fn render(&self, world: &World, viewport: &Rectangle,
+              tile_size: &Vec2, tile_sep: &Vec2)
+    {
+        let mut screen = Vec2::new(0.0, 0.0);
+        for y in viewport.y1..viewport.y2 {
+            screen.x = 0.0;
+            for x in viewport.x1..viewport.x2 {
+                let tile = Point::from((x, y));
+                self.render_tile(&world, &tile, &screen, &tile_size);
+                screen.x += tile_size.x + tile_sep.x;
+            }
+            screen.y += tile_size.y + tile_sep.y;
+        }
+    }
 
-pub trait MapRenderer {
-    fn render(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2);
+    fn render_tile(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2);
 }
 
 
-pub struct TerrainRenderer {
+pub struct TerrainLayer {
     pub terrains: Tileset,
     pub features: Tileset
 }
 
-pub struct ActorRenderer {
+pub struct ActorLayer {
     pub tileset: Tileset
 }
 
-pub struct ItemRenderer {
+pub struct ItemLayer {
     pub tileset: Tileset
 }
 
-impl MapRenderer for TerrainRenderer {
+impl MapLayer for TerrainLayer {
     #[inline]
-    fn render(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
+    fn render_tile(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
         if let Some(terrain) = world.terrain.get(&world_pos) {
             // draw terrain base tile
             let index = self.terrain_index(&terrain);
@@ -137,7 +147,7 @@ impl MapRenderer for TerrainRenderer {
     }    
 }
 
-impl TerrainRenderer {
+impl TerrainLayer {
     fn terrain_index(&self, tile: &Terrain) -> usize {
         match tile.kind {
             TerrainKind::Grass => 1,
@@ -174,9 +184,9 @@ impl TerrainRenderer {
 }
 
 
-impl MapRenderer for ActorRenderer {
+impl MapLayer for ActorLayer {
     #[inline]
-    fn render(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
+    fn render_tile(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
         for (_, actor) in world.actors.iter()
             .filter(|(_, actor)| actor.pos == *world_pos) {
                 let index = self.tile_index(&actor);
@@ -187,7 +197,7 @@ impl MapRenderer for ActorRenderer {
     }
 }
 
-impl ActorRenderer {
+impl ActorLayer {
     #[inline]
     fn tile_index(&self, actor: &Actor) -> usize {
         match actor.kind {
@@ -198,9 +208,9 @@ impl ActorRenderer {
     }
 }
 
-impl MapRenderer for ItemRenderer {
+impl MapLayer for ItemLayer {
     #[inline]
-    fn render(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
+    fn render_tile(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
         for item_id in world.item_ids_at(&world_pos) {
             let mut tileset_index = 0;
             if let Some(item) = world.items.get(&item_id) {
@@ -214,7 +224,7 @@ impl MapRenderer for ItemRenderer {
 }
 
 
-impl ItemRenderer {
+impl ItemLayer {
     pub fn item_index(&self, item: &Item) -> usize {
         match item.kind {
             ItemKind::Money(_) => 1,
@@ -224,11 +234,11 @@ impl ItemRenderer {
 }
 
 
-pub struct HighlightRenderer();
+pub struct HighlightLayer();
 
-impl MapRenderer for HighlightRenderer {
+impl MapLayer for HighlightLayer {
     #[inline]
-    fn render(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
+    fn render_tile(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
         if world.highlights.contains(&world_pos) {
             draw_rectangle_lines(screen_pos.x, screen_pos.y, tile_size.x, tile_size.y, 4.0, RED);
         }

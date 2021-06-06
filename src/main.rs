@@ -20,7 +20,7 @@ use item::{ItemKind}; //ItemId, Item, ItemKind, ItemMap};
 use world::{World, ViewportMode, adjust_viewport};
 use item::Item;
 use action::{Action, GuiAction};
-use render::{Map, Tileset, Pattern, TerrainRenderer, ItemRenderer, ActorRenderer, HighlightRenderer};
+use render::{Map, Tileset, Pattern, TerrainLayer, ItemLayer, ActorLayer, HighlightLayer};
 
 use std::collections::{VecDeque};
 
@@ -310,23 +310,23 @@ impl MainState {
         let viewport = Rectangle::from((0, 0, vw, vh));
 
         let mut main_map = Map::new(width, height, Point::new(vw, vh));
-        main_map.add_layer(Box::new(TerrainRenderer {
+        main_map.add_layer(Box::new(TerrainLayer {
             terrains: Tileset::new("assets/terrain32.png", &pattern).await.unwrap(),
             features: Tileset::new("assets/features32.png", &pattern).await.unwrap(),
         }));
-        main_map.add_layer(Box::new(ItemRenderer {
+        main_map.add_layer(Box::new(ItemLayer {
             tileset: Tileset::new("assets/items32.png", &pattern).await.unwrap()
         }));
-        main_map.add_layer(Box::new(ActorRenderer {
+        main_map.add_layer(Box::new(ActorLayer {
             tileset: Tileset::new("assets/actors32.png", &pattern).await.unwrap()
         }));
 
-        main_map.add_layer(Box::new(HighlightRenderer()));
+        main_map.add_layer(Box::new(HighlightLayer()));
 
-        // TODO: share renderer, so that we do not need to allocate a texture
+        // TODO: share Layer, so that we do not need to allocate a texture
         // more than once.
         let mut mini_map = Map::new(4.0, 4.0, Point::new(vw, vh));
-        mini_map.add_layer(Box::new(TerrainRenderer {
+        mini_map.add_layer(Box::new(TerrainLayer {
             terrains: Tileset::new("assets/terrain32.png", &pattern).await.unwrap(),
             features: Tileset::new("assets/features32.png", &pattern).await.unwrap(),
         }));
