@@ -16,6 +16,7 @@ pub struct World {
     pub terrain: TerrainMap,
     player_id: ActorId,
     pub time: i32,
+    pub highlight_mode: HighlightMode,
     pub highlights: PointSet
     //pub tiles: TileMap
 }
@@ -32,6 +33,7 @@ impl World {
             terrain: read_terrain_from_file("assets/sample.layer").unwrap(),
             player_id,
             time: 0,
+            highlight_mode: HighlightMode::None,
             highlights: PointSet::new()
             //tiles: TileMap::new(),
         }
@@ -57,19 +59,14 @@ impl World {
         player.inventory.push(id3);
         player.inventory.push(id4);
 
-        // add random players
+        // spawn some random NPCs
 
-        // TODO: choose random tile
-        // TODO: check if tile is occupied
-        // do we need some kind of index for the actor position here?
+        // TODO: this is some sort of index which could be kept up-to-date
         let actor_positions = self.actors.iter()
             .map(|(id, actor)| (actor.pos.clone(), id.clone()))
             .collect::<HashMap<Point, ActorId>>();
 
-        dbg!(&actor_positions);
-
-        // spawn some random NPCs
-        let MAX_NPC: u32 = 5;
+        let max_npc: u32 = 5;
         
         let mut slots = self.terrain.iter()
             .filter(|(pos, tile)| tile.kind == TerrainKind::StoneFloor
@@ -78,7 +75,7 @@ impl World {
             .collect::<Vec<&Point>>();
 
         let mut rng = rand::thread_rng();
-        for _ in 0..MAX_NPC {
+        for _ in 0..max_npc {
             let len = slots.len();
             if len == 0 {
                 break;
@@ -223,4 +220,13 @@ pub fn pick_up_items(world: &World, actor_id: &ActorId, pos: Point) -> Action
         .collect::<Vec<_>>();
 
     return Action::PickUp { actor_id: actor_id.clone(), items };
+}
+
+
+#[derive(Debug, Clone)]
+pub enum HighlightMode {
+    None,
+    Inspect,
+    Line,
+    FOV
 }

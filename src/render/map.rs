@@ -1,4 +1,4 @@
-use crate::world::World;
+use crate::world::{World, HighlightMode};
 use crate::point::{Point, Rectangle, PointSet};
 use crate::render::Tileset;
 use crate::terrain::{Terrain, TerrainKind, TerrainFeature, Orientation};
