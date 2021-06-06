@@ -589,7 +589,7 @@ async fn main() {
 
     // the World contains the actual game data
     let mut world = World::new();
-    world.populate_world();
+    game::init::populate_world(&mut world);
 
     // main loop
     let mut actions: Vec<Action> = vec!();
