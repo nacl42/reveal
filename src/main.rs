@@ -7,7 +7,6 @@ mod point;
 mod item;
 mod world;
 mod flake;
-mod id;
 mod idmap;
 mod action;
 mod render;

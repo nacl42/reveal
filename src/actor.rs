@@ -1,8 +1,6 @@
 use crate::point::Point;
 use crate::item::ItemId;
-use crate::idmap::IdMap;
-
-use crate::id::Id;
+use crate::idmap::{Id, IdMap};
 
 #[derive(Debug, Clone)]
 pub struct Actor {

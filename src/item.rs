@@ -1,7 +1,6 @@
 use crate::point::Point;
 use crate::actor::{ActorId};
-use crate::id::Id;
-use crate::idmap::IdMap;
+use crate::idmap::{Id, IdMap};
 
 pub type ItemId = Id<Item>;
 pub type ItemMap = IdMap<Item>;
