@@ -69,8 +69,13 @@ pub enum TerrainKind {
     Window,
     StoneFloor,
     Path,
-    Door(DoorState)
+    Door(DoorState),
+    Bridge(Orientation)
 }
+
+
+#[derive(Debug, Clone)]
+pub enum Orientation { Horizontal, Vertical }
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -103,6 +108,8 @@ where P: AsRef<std::path::Path>
         '~' => TerrainKind::ShallowWater, //8,
         'D' => TerrainKind::Door(DoorState::Open), //10,
         '+' => TerrainKind::Window, //11,
+        'B' => TerrainKind::Bridge(Orientation::Vertical),
+        'b' => TerrainKind::Bridge(Orientation::Horizontal),
     };
 
     let mut x = 0;

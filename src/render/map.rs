@@ -1,7 +1,7 @@
 use crate::world::World;
 use crate::point::{Point, Rectangle, PointSet};
 use crate::render::Tileset;
-use crate::terrain::{Terrain, TerrainKind, TerrainFeature};
+use crate::terrain::{Terrain, TerrainKind, TerrainFeature, Orientation};
 use crate::item::{Item, ItemKind};
 
 use macroquad::prelude::*;
@@ -151,6 +151,8 @@ impl TerrainRenderer {
             // Grate => 13,
             TerrainKind::Door(_) => 14,
             TerrainKind::Window => 15,
+            TerrainKind::Bridge(Orientation::Vertical) => 16,
+            TerrainKind::Bridge(Orientation::Horizontal) => 17, // TODO
             _ => 0,
         }
     }
