@@ -14,7 +14,7 @@ mod game;
 
 use effect::{TextEffect, ScaleText};
 use terrain::{TerrainKind, Terrain, TerrainFeature, TerrainMap};
-use actor::{Actor, ActorId}; //, ActorKind, ActorId, ActorMap};
+use actor::{Actor, ActorId};
 use point::{Point, Rectangle, PointSet};
 use world::{World, ViewportMode, adjust_viewport};
 use item::Item;

@@ -1,6 +1,7 @@
 use crate::point::Point;
 use crate::item::ItemId;
 use crate::idmap::{Id, IdMap};
+use crate::game::{ActorKind, ActorAI};
 
 #[derive(Debug, Clone)]
 pub struct Actor {
@@ -23,21 +24,6 @@ impl Actor {
     }
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
-pub enum ActorKind {
-    Player,
-    Cat,
-    Dog,
-    Townsfolk,
-}
-
-
-#[derive(Debug, Clone)]
-pub enum ActorAI {
-    DoNothing,
-    WanderAround,
-}
 
 pub type ActorId = Id<Actor>;
 pub type ActorMap = IdMap<Actor>;

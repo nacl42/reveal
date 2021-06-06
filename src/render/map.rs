@@ -3,7 +3,7 @@ use crate::point::{Point, Rectangle, PointSet};
 use crate::render::Tileset;
 use crate::terrain::{Terrain, TerrainKind, TerrainFeature, Orientation};
 use crate::item::{Item};
-use crate::actor::{Actor, ActorKind};
+use crate::actor::Actor;
 use crate::game::tile_index::{terrain_index, feature_index, item_index, actor_index};
 
 use crate::game::*;
