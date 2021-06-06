@@ -1,7 +1,10 @@
+//! The Terrain is the background tile and consists
+//! of the `TerrainKind` and optionally a `TerrainFeature`.
+//!
+//!
+
 use crate::point::Point;
 use std::collections::HashMap;
-use rand::Rng;
-use maplit::hashmap;
 
 use crate::game::{TerrainKind, TerrainFeature};
 
@@ -21,21 +24,17 @@ impl Terrain {
     }
 
     pub fn set_random_decor(&mut self) {
-        let mut rng = rand::thread_rng();
-        self.feature = match self.kind {
-            TerrainKind::Grass => Some(TerrainFeature::Flower(rng.gen_range(0..7))),
-            TerrainKind::ShallowWater => Some(TerrainFeature::Waterlily),
-            _ => None
-        };
+        match self.kind.random_decor() {
+            Some(feature) => self.feature = Some(feature),
+            None => {}
+        }
     }
 
+    // TODO: we could alter the function call to
+    // self.kind.is_blocking(&self), so that the TerrainKind
+    // has additional information about the Terrain.
     pub fn is_blocking(&self) -> bool {
-        match self.kind {
-            TerrainKind::Hedge | TerrainKind::Wall |
-            TerrainKind::Water | TerrainKind::ShallowWater |
-            TerrainKind::Window => true,
-            _ => false
-        }
+        self.kind.is_blocking()
     }
 }
 
