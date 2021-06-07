@@ -1,15 +1,11 @@
 
 use crate::point::{Point, Rectangle, PointSet};
-use crate::item::{Item, ItemMap, ItemId};
+use crate::item::{ItemMap, ItemId};
 use crate::actor::{Actor, ActorMap, ActorId};
-use crate::terrain::{self, Terrain, TerrainMap};
+use crate::terrain::{Terrain, TerrainMap};
 use crate::action::Action;
 
 use crate::game::*;
-
-use std::collections::HashMap;
-use maplit::hashmap;
-use rand::Rng;
 
 #[derive(Debug)]
 pub struct World {
@@ -161,8 +157,6 @@ pub fn move_by(world: &World, actor_id: &ActorId, dx: i32, dy: i32, follow: bool
 
 pub fn pick_up_items(world: &World, actor_id: &ActorId, pos: Point) -> Action
 {
-    let actor = world.actors.get(&actor_id).unwrap();
-                    
     println!("actor picks something up at {:?}", pos);
     let items = world.items.iter()
         .filter(|(_, item)| item.pos.is_some())
@@ -174,6 +168,7 @@ pub fn pick_up_items(world: &World, actor_id: &ActorId, pos: Point) -> Action
 }
 
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum HighlightMode {
     Inspect,

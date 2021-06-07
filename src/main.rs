@@ -1,7 +1,6 @@
 use macroquad::prelude::*;
 
 mod actor;
-mod effect;
 mod terrain;
 mod point;
 mod item;
@@ -12,16 +11,10 @@ mod action;
 mod render;
 mod game;
 
-use effect::{TextEffect, ScaleText};
-use terrain::{Terrain, TerrainMap};
-use actor::{Actor, ActorId};
-use point::{Point, Rectangle, PointSet};
+use point::{Point, Rectangle};
 use world::{World, ViewportMode, adjust_viewport, HighlightMode};
-use item::Item;
 use action::{Action, GuiAction};
 use render::{Map, Tileset, Pattern, TerrainLayer, ItemLayer, ActorLayer, HighlightLayer};
-
-use game::*;
 
 use std::collections::{VecDeque};
 
@@ -59,7 +52,6 @@ struct MainState {
     egui_has_focus: bool,
     material_vignette: Material,
     material_bw: Material,
-    params: TextParams,
     params_info: TextParams,
     main_map: Map,
     mini_map: Map
@@ -164,14 +156,6 @@ fn read_input(world: &World) -> Vec<Action> {
         actions.push(Action::GUI(GuiAction::HideShowFOV));
     }
     
-        // T => show off text effect
-        // AGAIN:
-    // if is_key_pressed(KeyCode::T) {
-    //     if effects.len() == 0 {
-    //         effects.push(Box::new(ScaleText::new()));
-    //     }
-    // }
-
     // S => switch player status window
     if is_key_pressed(KeyCode::S) {
         actions.push(Action::GUI(GuiAction::HideShowStatus));
@@ -283,12 +267,6 @@ impl MainState {
     async fn new() -> Result<MainState, MainStateError> {
         // load assets
         let font = load_ttf_font("assets/DejaVuSerif.ttf").await;
-        let params = TextParams {
-            font,
-            font_size: 24,
-            color: RED,
-            ..Default::default()
-        };
 
         let params_info = TextParams {
             font,
@@ -358,7 +336,6 @@ impl MainState {
             egui_has_focus: false,
             material_vignette,
             material_bw,
-            params,
             params_info,
             main_map,
             mini_map
@@ -471,30 +448,18 @@ impl MainState {
     fn update_fov(&self, world: &mut World) {
         // EXPERIMENTAL: highlight certain tiles by surrounding
         // them with a red rectangle
-        let p = world.player_pos();
+        let from = world.player_pos();
         let points = &mut world.highlights;
         points.clear();
 
         // TODO: use map offset, not arbitrary number
         let pos = Vec2::from(mouse_position()) - vec2(0.0, 32.0); // - map offset
         if let Some(map_pos) = self.main_map.screen_to_tile(&pos) {
-            points.insert(map_pos + self.viewport.top_left());
-        }
-        
-        if true {
-            points.insert(p.clone());
-            points.insert(p.offset(0, 1));
-            points.insert(p.offset(0, 2));
-            points.insert(p.offset(0, -1));
-            points.insert(p.offset(0, -2));
-            points.insert(p.offset(1, 0));
-            points.insert(p.offset(2, 0));
-            points.insert(p.offset(-1, 0));
-            points.insert(p.offset(-2, 0));
-            points.insert(p.offset(-1, -1));
-            points.insert(p.offset(1, -1));
-            points.insert(p.offset(-1, 1));
-            points.insert(p.offset(1, 1));
+            let map_pos = map_pos + self.viewport.top_left();
+
+            for point in from.line_to(&map_pos) {
+                points.insert(point);
+            }
         }
     }
    
@@ -512,9 +477,7 @@ impl MainState {
 
         //let base = vec2(10.0, 70.0);
         let base = vec2(0.0, 32.0);
-        let mut map_size = vec2(0.0, 0.0);
         let texture = self.main_map.texture();
-        map_size = vec2(texture.width(), texture.height());
 
         // EXPERIMENTAL
         // TODO: do we copy the texture here?
@@ -535,7 +498,6 @@ impl MainState {
             screen_width() - texture.width() - 10.0,
             10.0
         );
-        let mini_map_size = vec2(texture.width(), texture.height());
         // TODO: do we copy the texture here?
         draw_texture_ex(
             *texture, map_pos.x, map_pos.y, WHITE,

@@ -31,9 +31,17 @@ impl Point {
         }
     }
 
+    #[allow(dead_code)]
     /// Return a new point with an offset (dx, dy).
     pub fn offset(&self, dx: i32, dy: i32) -> Point {
         Point { x: self.x + dx, y: self.y + dy}
+    }
+
+    #[allow(dead_code)]
+    /// Return iterator that draws a line from this point to the given
+    /// `to` point.
+    pub fn line_to(&self, to: &Point) -> impl Iterator<Item=Point> {
+        LineDrawingIterator::new(self, to)
     }
 }
 
@@ -109,23 +117,28 @@ impl Rectangle {
     pub fn size(&self) -> Point {
         Point { x: self.width(), y: self.height() }
     }
-    
+
+    #[allow(dead_code)]
     pub fn top_left(&self) -> Point {
         Point { x: self.x1, y: self.y1 }
     }
 
+    #[allow(dead_code)]
     pub fn top_right(&self) -> Point {
         Point { x: self.x2, y: self.y1 }
     }
 
+    #[allow(dead_code)]
     pub fn bottom_left(&self) -> Point {
         Point { x: self.x1, y: self.y2 }
     }
 
+    #[allow(dead_code)]
     pub fn bottom_right(&self) -> Point {
         Point { x: self.x2, y: self.y2 }
     }
 
+    #[allow(dead_code)]
     pub fn center(&self)-> Point {
         Point {
             x: self.x1 + ((self.x2 - self.x1) / 2) as i32,
@@ -133,6 +146,7 @@ impl Rectangle {
         }
     }
 
+    #[allow(dead_code)]
     // return true if the given Point p lies within the Rectangle
     pub fn contains(&self, p: &Point) -> bool {
         (p.x >= self.x1)
@@ -141,6 +155,7 @@ impl Rectangle {
             && (p.y <= self.y2)
     }
 
+    #[allow(dead_code)]
     // return iterator over all points of the rect
     pub fn iter(&self) -> impl Iterator<Item=Point> {
         RectangleIterator::new(self.clone())
@@ -174,6 +189,61 @@ impl From<(Point, Point)> for Rectangle {
     }
 }
 
+
+/// LineDrawingIterator, implementation according to Wikipedia:
+/// [[https://de.wikipedia.org/wiki/Bresenham-Algorithmus]] (date:
+/// 2021-06-07)
+struct LineDrawingIterator {
+    x: i32, y: i32,
+    x1: i32, y1: i32,
+    dx: i32, dy: i32,
+    sx: i32, sy: i32,
+    err: i32,
+    end_iteration: bool
+}
+
+impl LineDrawingIterator {
+    fn new(from: &Point, to: &Point) -> Self {
+        let dx = i32::abs(to.x-from.x);
+        let sx = if from.x < to.x { 1 } else { -1 };
+        let dy = -1 * i32::abs(to.y-from.y);
+        let sy = if from.y < to.y { 1 } else { -1};
+        let err = dx + dy;
+        let x = from.x;
+        let y = from.y;
+        let x1 = to.x;
+        let y1 = to.y;
+        let end_iteration = false;
+        Self { x, y, x1, y1, dx, dy, sx, sy, err, end_iteration }
+    }
+}
+
+impl Iterator for LineDrawingIterator {
+    type Item = Point;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.end_iteration {
+            return None;
+        }
+        if (self.x == self.x1) && (self.y == self.y1) {
+            self.end_iteration = true;
+            Some(Point::new(self.x, self.y))
+        } else {
+            let rv = Some(Point::new(self.x, self.y));
+            
+            let e2 = 2*self.err;
+            if e2 > self.dy {
+                self.err += self.dy;
+                self.x += self.sx;
+            }
+            if e2 < self.dx {
+                self.err += self.dx;
+                self.y += self.sy;
+            }
+            rv
+        }
+    }
+}
 
 struct RectangleIterator {
     x1: i32, x2: i32, y2: i32,
@@ -219,3 +289,63 @@ impl Iterator for RectangleIterator {
 
 
 pub type PointSet = HashSet<Point>;
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn corners() {
+        let rect = Rectangle::from((10, 20, 8, 4));
+        assert_eq!(rect.top_left(), Point::from((10, 20)));
+        assert_eq!(rect.bottom_left(), Point::from((10, 24)));
+        assert_eq!(rect.top_right(), Point::from((18, 20)));
+        assert_eq!(rect.bottom_right(), Point::from((18, 24)));
+    }
+
+    #[test]
+    fn iter_line_1() {
+        let from = Point::from((2, 1));
+        let to = Point::from((8, 5));
+        let mut result = Vec::<Point>::new();
+        result.push((2, 1).into());
+        result.push((3, 2).into());
+        result.push((4, 2).into());
+        result.push((5, 3).into());
+        result.push((6, 4).into());
+        result.push((7, 4).into());
+        result.push((8, 5).into());
+
+        let n_result = result.len();
+        let mut n_algorithm = 0;
+        for (point_result, point_algorithm) in
+            result.into_iter().zip(from.line_to(&to))
+        {
+            //dbg!((point_result, point_algorithm));
+            assert_eq!(point_result, point_algorithm);
+            n_algorithm += 1;
+        }
+        assert_eq!(n_algorithm, n_result);
+    }
+
+    #[test]
+    fn iter_line_2() {
+        let from = Point::from((3, 5));
+        let to = Point::from((3, 5));
+        let mut result = Vec::<Point>::new();
+        result.push((3, 5).into());
+
+        let n_result = result.len();
+        let mut n_algorithm = 0;
+        for (point_result, point_algorithm) in
+            result.into_iter().zip(from.line_to(&to))
+        {
+            //dbg!((point_result, point_algorithm));
+            assert_eq!(point_result, point_algorithm);
+            n_algorithm += 1;
+        }
+        assert_eq!(n_algorithm, n_result);
+        
+    }
+}

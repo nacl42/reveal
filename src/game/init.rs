@@ -62,7 +62,7 @@ pub fn populate_world(world: &mut World) {
     let mut slots = world.terrain.iter()
         .filter(|(pos, tile)| tile.kind == TerrainKind::StoneFloor
                 && !actor_positions.contains_key(*pos))
-        .map(|(pos, tile)| pos)
+        .map(|(pos, _tile)| pos)
         .collect::<Vec<&Point>>();
     
     let mut rng = rand::thread_rng();

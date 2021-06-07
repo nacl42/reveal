@@ -7,7 +7,7 @@ pub enum ActorKind {
     Townsfolk,
 }
 
-
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum ActorAI {
     DoNothing,

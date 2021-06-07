@@ -1,12 +1,8 @@
 use crate::world::{World, HighlightMode};
-use crate::point::{Point, Rectangle, PointSet};
+use crate::point::{Point, Rectangle};
 use crate::render::Tileset;
-use crate::terrain::{Terrain};
-use crate::item::{Item};
-use crate::actor::Actor;
 
 use crate::game::tile_index::{terrain_index, feature_index, item_index, actor_index};
-use crate::game::*;
 
 use macroquad::prelude::*;
 
@@ -85,13 +81,12 @@ impl Map {
     /// derive actual target texture size (in pixel) from `map_size`
     /// (in tiles)
     pub fn target_size(&self) -> Vec2 {
-        vec2((self.map_size.x as f32 * (self.tile_size.x + self.tile_sep.x)),
-             (self.map_size.y as f32 * (self.tile_size.y + self.tile_sep.y)))
+        vec2(
+            self.map_size.x as f32 * (self.tile_size.x + self.tile_sep.x),
+            self.map_size.y as f32 * (self.tile_size.y + self.tile_sep.y)
+        )
     }
 
-    pub fn render_target(&self) -> RenderTarget {
-        self.target
-    }
 }
 
 /// A Map consists of multiple MapLayer objects.  Each MapLayer is
@@ -142,9 +137,7 @@ impl MapLayer for TerrainLayer {
 
             // draw terrain features
             if let Some(index) = feature_index(&terrain) {
-                if let Some(&source) = self.features.sources.get(index) {
-                    self.features.render(index, *screen_pos, *tile_size);
-                }
+                self.features.render(index, *screen_pos, *tile_size);
             }            
         }
     }    
@@ -157,9 +150,7 @@ impl MapLayer for ActorLayer {
         for (_, actor) in world.actors.iter()
             .filter(|(_, actor)| actor.pos == *world_pos) {
                 let index = actor_index(&actor);
-                if let Some(&source) = self.tileset.sources.get(index) {
-                    self.tileset.render(index, *screen_pos, *tile_size);
-                }
+                self.tileset.render(index, *screen_pos, *tile_size);
             }
     }
 }
@@ -169,12 +160,9 @@ impl MapLayer for ItemLayer {
     #[inline]
     fn render_tile(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
         for item_id in world.item_ids_at(&world_pos) {
-            let mut tileset_index = 0;
             if let Some(item) = world.items.get(&item_id) {
                 let index = item_index(&item);
-                if let Some(&source) = self.tileset.sources.get(index) {
-                    self.tileset.render(index, *screen_pos, *tile_size);
-                }
+                self.tileset.render(index, *screen_pos, *tile_size);
             }
         }
     }

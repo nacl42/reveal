@@ -1,7 +1,7 @@
 
 use crate::point::Point;
 use crate::actor::ActorId;
-use crate::world::{World, ViewportMode};
+use crate::world::{ViewportMode};
 use crate::item::ItemId;
 
 #[derive(Debug)]
