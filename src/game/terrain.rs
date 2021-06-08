@@ -1,4 +1,5 @@
 use rand::Rng;
+use crate::terrain::Terrain;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -26,7 +27,7 @@ pub enum Orientation { Horizontal, Vertical }
 pub enum DoorState { Open, Closed, Locked }
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TerrainFeature {
     Mushroom,
     Flower(u8),
@@ -46,11 +47,14 @@ impl TerrainKind {
         }
     }
 
-    pub fn is_blocking(&self) -> bool {
+    pub fn is_blocking(&self, terrain: &Terrain) -> bool {
         match self {
             TerrainKind::Hedge | TerrainKind::Wall |
-            TerrainKind::Water | TerrainKind::ShallowWater |
-            TerrainKind::Window => true,
+            TerrainKind::Water | TerrainKind::Window => true,
+            TerrainKind::ShallowWater
+                if terrain.feature.as_ref().map(|f| f == &TerrainFeature::Waterlily).is_some()
+                => false,
+            TerrainKind::ShallowWater => true,
             _ => false
         }
 

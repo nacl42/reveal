@@ -35,7 +35,7 @@ impl Terrain {
     // self.kind.is_blocking(&self), so that the TerrainKind
     // has additional information about the Terrain.
     pub fn is_blocking(&self) -> bool {
-        self.kind.is_blocking()
+        self.kind.is_blocking(&self)
     }
 }
 
