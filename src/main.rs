@@ -14,7 +14,11 @@ mod game;
 use point::{Point, Rectangle};
 use world::{World, ViewportMode, adjust_viewport, HighlightMode};
 use action::{Action, GuiAction};
-use render::{Map, Tileset, Pattern, TerrainLayer, ItemLayer, ActorLayer, HighlightLayer};
+use render::{
+    Map, Tileset, Pattern,
+    TerrainLayer, ItemLayer, ActorLayer, HighlightLayer,
+    InventoryWidget
+};
 
 use std::collections::{VecDeque};
 
@@ -34,27 +38,6 @@ fn window_conf() -> Conf {
         fullscreen: true,
         ..Default::default()
     }
-}
-
-
-
-struct MainState {
-    quit: bool,
-    last_input: f64,
-    end_of_turn: f64,
-    is_bw: bool,
-    show_inventory: bool,
-    show_help: bool,
-    show_status: bool,
-    viewport: Rectangle,
-    border_size: Point,
-    messages: VecDeque<String>,
-    egui_has_focus: bool,
-    material_vignette: Material,
-    material_bw: Material,
-    params_info: TextParams,
-    main_map: Map,
-    mini_map: Map
 }
 
 
@@ -257,6 +240,25 @@ fn render_and_update_egui(ld: &mut MainState, world: &World) {
 
 
 
+struct MainState {
+    quit: bool,
+    last_input: f64,
+    end_of_turn: f64,
+    is_bw: bool,
+    show_inventory: bool,
+    show_help: bool,
+    show_status: bool,
+    viewport: Rectangle,
+    border_size: Point,
+    messages: VecDeque<String>,
+    egui_has_focus: bool,
+    material_vignette: Material,
+    material_bw: Material,
+    params_info: TextParams,
+    main_map: Map,
+    mini_map: Map,
+    inventory_widget: InventoryWidget
+}
 
 #[derive(Debug)]
 pub enum MainStateError {
@@ -322,6 +324,10 @@ impl MainState {
             Default::default()
         ).unwrap();
 
+        let inventory_widget = InventoryWidget::new(
+            vec2(screen_width()/2.0, screen_height() - 80.0)
+        );
+
         let state = MainState {
             quit: false,
             last_input: get_time(),
@@ -330,6 +336,7 @@ impl MainState {
             show_inventory: true,
             show_help: true,
             show_status: true,
+            inventory_widget,
             viewport,
             border_size: Point::from((10, 10)),
             messages: VecDeque::new(),
@@ -541,6 +548,9 @@ impl MainState {
             msg_params.color.a *= 0.7; // blend out color
             pos.y += yoffset;
         };
+
+        // render inventory
+        self.inventory_widget.render();
     }
 }
 
