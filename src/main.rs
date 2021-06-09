@@ -257,7 +257,8 @@ struct MainState {
     params_info: TextParams,
     main_map: Map,
     mini_map: Map,
-    inventory_widget: InventoryWidget
+    inventory_widget: InventoryWidget,
+    item_tileset: Tileset,
 }
 
 #[derive(Debug)]
@@ -324,9 +325,15 @@ impl MainState {
             Default::default()
         ).unwrap();
 
+        // inventory
         let inventory_widget = InventoryWidget::new(
-            vec2(screen_width()/2.0, screen_height() - 80.0)
+            vec2(screen_width()/2.0, screen_height() - 130.0)
         );
+
+        // TODO: share tilesets among different rendering widgets
+        let item_tileset = Tileset::new(
+            "assets/items32.png", &pattern
+        ).await.unwrap();
 
         let state = MainState {
             quit: false,
@@ -337,6 +344,7 @@ impl MainState {
             show_help: true,
             show_status: true,
             inventory_widget,
+            item_tileset,
             viewport,
             border_size: Point::from((10, 10)),
             messages: VecDeque::new(),
@@ -550,7 +558,12 @@ impl MainState {
         };
 
         // render inventory
-        self.inventory_widget.render();
+        if let Some(player) = world.actors.get(&world.player_id()) {
+            self.inventory_widget.render(
+                &world,
+                &player.inventory, &self.item_tileset
+            );
+        }
     }
 }
 

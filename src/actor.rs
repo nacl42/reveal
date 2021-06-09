@@ -8,7 +8,7 @@ pub struct Actor {
     pub kind: ActorKind,
     pub pos: Point,
     pub ai: Option<ActorAI>,
-    pub inventory: Vec<ItemId>
+    pub inventory: Inventory
 }
 
 impl Actor {
@@ -27,3 +27,6 @@ impl Actor {
 
 pub type ActorId = Id<Actor>;
 pub type ActorMap = IdMap<Actor>;
+
+
+pub type Inventory = Vec<ItemId>;
