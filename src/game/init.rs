@@ -1,6 +1,6 @@
 use crate::world::World;
 use crate::actor::{Actor, ActorId};
-use crate::item::Item;
+use crate::item::*;
 use crate::point::Point;
 use crate::terrain::read_from_file;
 
@@ -37,18 +37,21 @@ pub fn populate_world(world: &mut World) {
     world.items.add(item1);
     world.items.add(item2);
     
-    let item3 = Item::new(ItemKind::Wand).with_owner(player_id);
-    let id3 = world.items.add(item3);
-    
-    let item4 = Item::new(ItemKind::Money(42)).with_owner(player_id);
-    let id4 = world.items.add(item4);
-    
     let item5 = Item::new(ItemKind::Wand).with_pos((5, 6));
     world.items.add(item5);
-    
+
+    // add some items to player's inventory
+    let magical_wand = Item::new(ItemKind::Wand)
+        .with_owner(player_id);
+    let some_money = Item::new(ItemKind::Money(42))
+        .with_owner(player_id);
+    let healing_potion = Item::new(ItemKind::Potion(Potion::Healing))
+        .with_owner(player_id);
+
     let player = world.actors.get_mut(&player_id).unwrap();
-    player.inventory.push(id3);
-    player.inventory.push(id4);
+    player.inventory.push(world.items.add(magical_wand));
+    player.inventory.push(world.items.add(some_money));
+    player.inventory.push(world.items.add(healing_potion));
     
     // spawn some random NPCs
     

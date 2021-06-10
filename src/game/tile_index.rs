@@ -2,10 +2,9 @@
 //! and their corresponding index in the tilesets.
 //!
 
-use super::{ActorKind, ItemKind, TerrainKind, TerrainFeature, Orientation};
+use super::{ActorKind, TerrainKind, TerrainFeature, Orientation};
 
 use crate::actor::{Actor};
-use crate::item::{Item};
 use crate::terrain::{Terrain};
 
 pub fn terrain_index(tile: &Terrain) -> usize {
@@ -39,13 +38,6 @@ pub fn feature_index(tile: &Terrain) -> Option<usize> {
         Some(index)
     } else {
         None
-    }
-}
-
-pub fn item_index(item: &Item) -> usize {
-    match item.kind {
-        ItemKind::Money(_) => 1,
-        ItemKind::Wand => 2
     }
 }
 

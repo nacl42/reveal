@@ -5,7 +5,7 @@ use macroquad::prelude::*;
 use crate::actor::Inventory;
 use crate::world::World;
 use super::tileset::Tileset;
-use crate::game::tile_index::item_index;
+use crate::game::item_index;
 
 pub struct InventoryWidget {
     pos: Vec2,
