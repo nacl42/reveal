@@ -3,6 +3,7 @@ use crate::point::Point;
 use crate::actor::ActorId;
 use crate::world::{ViewportMode};
 use crate::item::ItemId;
+use crate::MainInputMode;
 
 #[derive(Debug)]
 pub enum Action {
@@ -24,4 +25,5 @@ pub enum GuiAction {
     HideShowHelp,
     HideShowStatus,
     HideShowFOV,
+    SwitchMode(MainInputMode)
 }

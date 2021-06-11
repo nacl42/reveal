@@ -35,13 +35,26 @@ fn window_conf() -> Conf {
         window_title: "Reveal".to_owned(),
         window_width: 1024,
         window_height: 800,
-        fullscreen: true,
+        //fullscreen: true,
         ..Default::default()
     }
 }
 
 
-fn read_input(world: &World) -> Vec<Action> {
+fn read_input_use_item(world: &World) -> Vec<Action> {
+    let mut actions = Vec::<Action>::new();
+
+    if is_key_pressed(KeyCode::Escape) {
+        println!("switching back to default mode");
+        actions.push(
+            Action::GUI(GuiAction::SwitchMode(MainInputMode::Default))
+        );
+    }
+
+    actions
+}
+
+fn read_input_default(world: &World) -> Vec<Action> {
 
     let mut actions = Vec::<Action>::new();
 
@@ -49,6 +62,14 @@ fn read_input(world: &World) -> Vec<Action> {
     if is_key_down(KeyCode::Q) {
         println!("GOODBYE");
         actions.push(Action::Quit);
+    }
+
+    // U => use item
+    if is_key_pressed(KeyCode::U) {
+        println!("switching to use item mode");
+        actions.push(
+            Action::GUI(GuiAction::SwitchMode(MainInputMode::UseItem))
+        );
     }
     
     // B => switch black/white and color mode
@@ -259,11 +280,18 @@ struct MainState {
     mini_map: Map,
     inventory_widget: InventoryWidget,
     item_tileset: Tileset,
+    input_mode: MainInputMode
 }
 
 #[derive(Debug)]
 pub enum MainStateError {
     Foo
+}
+
+#[derive(Debug)]
+pub enum MainInputMode {
+    Default,
+    UseItem,
 }
 
 impl MainState {
@@ -340,8 +368,8 @@ impl MainState {
             last_input: get_time(),
             end_of_turn: 0.0,
             is_bw: false,
-            show_inventory: true,
-            show_help: true,
+            show_inventory: false,
+            show_help: false,
             show_status: true,
             inventory_widget,
             item_tileset,
@@ -353,7 +381,8 @@ impl MainState {
             material_bw,
             params_info,
             main_map,
-            mini_map
+            mini_map,
+            input_mode: MainInputMode::Default
         };
 
         Ok(state)
@@ -455,6 +484,9 @@ impl MainState {
                     } else {
                         world.highlight_mode = None;
                     }
+                },
+                Action::GUI(GuiAction::SwitchMode(mode)) => {
+                    self.input_mode = mode;
                 }
             }
         }
@@ -485,9 +517,11 @@ impl MainState {
         self.main_map.render_to_target(&world, &self.viewport.top_left());
         
         // select material (this is just a toy function for testing)
-        match self.is_bw {
-            false => gl_use_material(self.material_vignette),
-            true => gl_use_material(self.material_bw)
+        match self.input_mode {
+            MainInputMode::Default
+                => gl_use_material(self.material_vignette),
+            MainInputMode::UseItem
+                => gl_use_material(self.material_bw)
         };
 
         //let base = vec2(10.0, 70.0);
@@ -603,7 +637,13 @@ async fn main() {
             && (get_time() - state.end_of_turn > DELTA_TURN)
         {
             state.last_input = get_time();
-            actions.extend(read_input(&world));
+
+            match state.input_mode {
+                MainInputMode::Default
+                    => actions.extend(read_input_default(&world)),
+                MainInputMode::UseItem
+                    => actions.extend(read_input_use_item(&world)),
+            }
         }
 
         state.update(&mut world, &mut actions);
