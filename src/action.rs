@@ -13,6 +13,7 @@ pub enum Action {
     Ouch,
     EndTurn,
     Quit,
+    UseItem { item_id: ItemId, target: ActorId },
     MoveViewport { dx: i32, dy: i32 },
     CenterViewport,
     GUI(GuiAction)

@@ -2,10 +2,14 @@
 
 use macroquad::prelude::*;
 
-use crate::actor::Inventory;
-use crate::world::World;
+use crate::{
+    actor::Inventory,
+    item::{ItemId, item_index},
+    world::World,
+};
+
 use super::tileset::Tileset;
-use crate::game::item_index;
+
 
 pub struct InventoryWidget {
     pos: Vec2,
@@ -48,6 +52,25 @@ impl InventoryWidget {
                     );
                 }
             }
+        }
+    }
+
+    pub fn screen_to_slot(&self, screen: &Vec2) -> Option<usize> {
+        // assume non-overlapping slots
+        for (n, rect) in self.destinations.iter().enumerate() {
+            let rect: Rect = rect.offset(self.pos);
+            if rect.contains(*screen) {
+                return Some(n);
+            }
+        }
+        None
+    }
+
+    pub fn screen_to_item_id<'inv>(&self, screen: &Vec2, inventory: &'inv Inventory)
+                             -> Option<&'inv ItemId> {
+        match self.screen_to_slot(&screen) {
+            Some(slot) => inventory.get(slot),
+            None => None
         }
     }
 }

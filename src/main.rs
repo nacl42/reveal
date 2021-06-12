@@ -41,7 +41,7 @@ fn window_conf() -> Conf {
 }
 
 
-fn read_input_use_item(world: &World) -> Vec<Action> {
+fn read_input_use_item(state: &MainState, world: &World) -> Vec<Action> {
     let mut actions = Vec::<Action>::new();
 
     if is_key_pressed(KeyCode::Escape) {
@@ -51,10 +51,42 @@ fn read_input_use_item(world: &World) -> Vec<Action> {
         );
     }
 
+    // TODO: render cancel button
+    
+    // check if we are hovering over an item
+    if false {
+        if let Some(player) = &world.actors.get(&world.player_id()) {
+            if let Some(item_id) =
+                state.inventory_widget.screen_to_item_id(
+                    &Vec2::from(mouse_position()), &player.inventory
+                ) {
+                    println!("Hovering over an inventory item");
+                }
+        }
+    }
+
+    // check if we have selected an item
+    if is_mouse_button_pressed(MouseButton::Left) {
+        if let Some(player) = &world.actors.get(&world.player_id()) {
+            if let Some(item_id) =
+                state.inventory_widget.screen_to_item_id(
+                    &Vec2::from(mouse_position()), &player.inventory
+                ) {
+                    if let Some(item) = world.items.get(item_id) {
+                        println!("Using item {}", item.description());
+                        actions.push(Action::UseItem {
+                            target: world.player_id(),
+                            item_id: *item_id
+                        });
+                    }
+                }
+        }
+    }
+    
     actions
 }
 
-fn read_input_default(world: &World) -> Vec<Action> {
+fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
 
     let mut actions = Vec::<Action>::new();
 
@@ -435,6 +467,10 @@ impl MainState {
                         }                    
                     }                    
                 },
+                Action::UseItem { item_id, target } => {
+                    world.use_item(&item_id, &target);
+                    self.input_mode = MainInputMode::Default;
+                },
                 Action::MoveViewport { dx, dy } => {
                     if dy != 0 {
                         //if viewport.y1 + dy > 0 {
@@ -516,7 +552,7 @@ impl MainState {
         // --- main map drawing --
         self.main_map.render_to_target(&world, &self.viewport.top_left());
         
-        // select material (this is just a toy function for testing)
+        // select material for map depending on input mode
         match self.input_mode {
             MainInputMode::Default
                 => gl_use_material(self.material_vignette),
@@ -640,9 +676,9 @@ async fn main() {
 
             match state.input_mode {
                 MainInputMode::Default
-                    => actions.extend(read_input_default(&world)),
+                    => actions.extend(read_input_default(&state, &world)),
                 MainInputMode::UseItem
-                    => actions.extend(read_input_use_item(&world)),
+                    => actions.extend(read_input_use_item(&state, &world)),
             }
         }
 

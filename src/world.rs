@@ -1,6 +1,6 @@
 
 use crate::point::{Point, Rectangle, PointSet};
-use crate::item::{ItemMap, ItemId};
+use crate::item::{ItemMap, ItemId, UseResult};
 use crate::actor::{Actor, ActorMap, ActorId};
 use crate::terrain::{Terrain, TerrainMap};
 use crate::action::Action;
@@ -73,6 +73,31 @@ impl World {
         actors.iter()
             //.filter(|(_, actor)| actor.pos)
             .any(|(_, actor)| actor.pos == *pos)
+    }
+
+    pub fn use_item(&mut self, item_id: &ItemId, target: &ActorId) {
+        if let Some(item) = self.items.get(&item_id) {
+            let mut item = item.clone();
+            match item.use_item(self, &target) {
+                UseResult::UsedUp => {
+                    // remove item from owner's inventory
+                    if let Some(owner) = item.owner {
+                        if let Some(inventory) = self.actors.get_mut(&self.player_id).map(|p| &mut p.inventory) {
+                            inventory.retain(|&x| x != *item_id)
+                        }
+                    }
+
+                    // then remove item from item list
+                    self.items.remove(&item_id);
+                },
+                UseResult::Replace => {
+                    // replace item, keeping the reference
+                    // discard result
+                    let _ = self.items.replace(&item_id, item);
+                },
+                _ => {}
+            }
+        }
     }
 }
 

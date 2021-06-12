@@ -5,6 +5,12 @@ use std::hash::{Hash, Hasher};
 
 use crate::flake;
 
+
+#[derive(Debug)]
+pub enum IdMapError {
+    IdDoesNotExist
+}
+
 #[derive(Debug)]
 pub struct IdMap<T> {
     map: HashMap<Id<T>, T>,
@@ -29,6 +35,25 @@ impl<T> IdMap<T> {
         key
     }
 
+    /// For the entry with the given `id`, replace its
+    /// value with the new `value`. The old value is returned.
+    /// If there was no old value, the function does not
+    /// insert the new value but returns Err.
+    pub fn replace(&mut self, id: &Id<T>, value: T) -> Result<T, IdMapError>
+    {
+        if let Some(old_value)= self.map.remove(&id) {
+            self.map.insert(id.clone(), value);
+            Ok(old_value)
+        } else {
+            Err(IdMapError::IdDoesNotExist)
+        }
+    }
+    
+    /// Remove the value with the given key from the IdMap.
+    pub fn remove(&mut self, id: &Id<T>) -> Option<T>{
+        self.map.remove(&id)
+    }
+    
     /// Get a reference to the value with the given id.
     pub fn get(&self, id: &Id<T>) -> Option<&T> {
         self.map.get(id)

@@ -1,7 +1,7 @@
 use crate::point::Point;
 use crate::actor::{ActorId};
 use crate::idmap::{Id, IdMap};
-use crate::game::ItemKind;
+use crate::world::World;
 
 pub type ItemId = Id<Item>;
 pub type ItemMap = IdMap<Item>;
@@ -12,6 +12,32 @@ pub struct Item {
     pub kind: ItemKind,
     pub pos: Option<Point>,
     pub owner: Option<ActorId>
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+pub enum ItemKind {
+    Money(u32),
+    Wand,
+    Ore,
+    Gold,
+    Potion(Potion),
+    Bread,
+    Barrel
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+pub enum Potion {
+    Empty,
+    Healing
+}
+
+#[derive(Debug, Clone)]
+pub enum UseResult {
+    UsedUp,
+    Replace,
+    Cancel
 }
 
 impl Item {
@@ -36,6 +62,46 @@ impl Item {
     }
 
     pub fn description(&self) -> String {
-        self.kind.description()
+        match self.kind {
+            ItemKind::Wand => String::from("a magical wand"),
+            ItemKind::Ore => format!("a chunk of ore"),
+            ItemKind::Gold => format!("a chunk of gold"),
+            ItemKind::Bread => format!("a loaf of bread"),
+            ItemKind::Money(x) => format!("{} coins of gold", x),
+            ItemKind::Potion(Potion::Empty) => format!("an empty potion"),
+            ItemKind::Potion(Potion::Healing) => format!("a potion of healing"),
+            ItemKind::Barrel => format!("a wooden barrel"),
+        }
+    }
+
+    pub fn use_item(&mut self, world: &mut World, target: &ActorId) -> UseResult {
+        match self.kind {
+            ItemKind::Potion(Potion::Healing) => {
+                println!("You drink the potion and feel much better.");
+                self.kind = ItemKind::Potion(Potion::Empty);
+                UseResult::Replace
+            },
+            ItemKind::Potion(Potion::Empty) => {
+                println!("Not much use for an empty bottle. Away with it!");
+                UseResult::UsedUp
+            },
+            _ => UseResult::Cancel
+        }
+    }
+}
+
+pub fn item_index(item: &Item) -> usize {
+    match item.kind {
+        ItemKind::Ore => 0,
+        ItemKind::Gold => 1,
+        ItemKind::Wand => 2,
+        ItemKind::Bread => 3,
+        ItemKind::Money(x) if x > 50 => 13,
+        ItemKind::Money(x) if x < 50 => 12,
+        ItemKind::Money(x) if x < 30 => 11,
+        ItemKind::Money(_) => 10,
+        ItemKind::Barrel => 20,
+        ItemKind::Potion(Potion::Healing) => 30,
+        ItemKind::Potion(Potion::Empty) => 31,
     }
 }

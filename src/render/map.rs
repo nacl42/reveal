@@ -1,9 +1,13 @@
-use crate::world::{World, HighlightMode};
-use crate::point::{Point, Rectangle};
-use crate::render::Tileset;
 
 use crate::game::tile_index::{terrain_index, feature_index, actor_index};
-use crate::game::item_index;
+
+use crate::{
+    item::item_index,
+    world::{World, HighlightMode},
+    point::{Point, Rectangle}
+};
+
+use super::{Tileset};
 
 use macroquad::prelude::*;
 
