@@ -82,6 +82,20 @@ fn read_input_use_item(state: &MainState, world: &World) -> Vec<Action> {
                     }
                 }
         }
+    } else if is_mouse_button_pressed(MouseButton::Right) {
+        if let Some(player) = &world.actors.get(&world.player_id()) {
+            if let Some(item_id) =
+                state.inventory_widget.screen_to_item_id(
+                    &Vec2::from(mouse_position()), &player.inventory
+                ) {
+                    if let Some(item) = world.items.get(item_id) {
+                        println!("Dropping item {}", item.description());
+                        actions.push(Action::DropItem {
+                            item_id: *item_id
+                        });
+                    }
+                }        
+        }
     }
     
     actions
@@ -472,6 +486,10 @@ impl MainState {
                     world.use_item(&item_id, &target);
                     self.input_mode = MainInputMode::Default;
                 },
+                Action::DropItem { item_id } => {
+                    world.drop_item(&item_id);
+                    self.input_mode = MainInputMode::Default;
+                }
                 Action::MoveViewport { dx, dy } => {
                     if dy != 0 {
                         //if viewport.y1 + dy > 0 {

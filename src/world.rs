@@ -82,8 +82,8 @@ impl World {
             match item.use_item(self, &target) {
                 UseResult::UsedUp => {
                     // remove item from owner's inventory
-                    if let Some(owner) = item.owner {
-                        if let Some(inventory) = self.actors.get_mut(&self.player_id).map(|p| &mut p.inventory) {
+                    if let Some(owner_id) = item.owner {
+                        if let Some(inventory) = self.actors.get_mut(&owner_id).map(|p| &mut p.inventory) {
                             inventory.retain(|&x| x != *item_id)
                         }
                     }
@@ -97,6 +97,21 @@ impl World {
                     let _ = self.items.replace(&item_id, item);
                 },
                 _ => {}
+            }
+        }
+    }
+
+    pub fn drop_item(&mut self, item_id: &ItemId) {
+        if let Some(item) = self.items.get_mut(&item_id) {
+            // remove item from owner's inventory
+            if let Some(owner_id) = item.owner {
+                if let Some(inventory) = self.actors.get_mut(&owner_id).map(|p| &mut p.inventory) {
+                    inventory.retain(|&x| x != *item_id)
+                }
+                // then set position of item to owner's position
+                if let Some(owner) = self.actors.get(&owner_id) {
+                    item.pos = Some(owner.pos);
+                }
             }
         }
     }

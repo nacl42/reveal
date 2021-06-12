@@ -10,10 +10,11 @@ pub enum Action {
     MoveFollow { actor_id: ActorId, pos: Point, mode: ViewportMode },
     Move { actor_id: ActorId, pos: Point },
     PickUp { actor_id: ActorId, items: Vec<ItemId> },
+    UseItem { item_id: ItemId, target: ActorId },
+    DropItem { item_id: ItemId },
     Ouch,
     EndTurn,
     Quit,
-    UseItem { item_id: ItemId, target: ActorId },
     MoveViewport { dx: i32, dy: i32 },
     CenterViewport,
     GUI(GuiAction)
