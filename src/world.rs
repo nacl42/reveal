@@ -1,7 +1,7 @@
 
 use crate::point::{Point, Rectangle, PointSet};
 use crate::item::{ItemMap, ItemId, UseResult};
-use crate::actor::{Actor, ActorMap, ActorId};
+use crate::actor::{Actor, ActorMap, ActorId, ActorKind};
 use crate::terrain::{Terrain, TerrainMap};
 use crate::action::Action;
 

@@ -1,7 +1,6 @@
 use crate::point::Point;
 use crate::item::ItemId;
 use crate::idmap::{Id, IdMap};
-use crate::game::{ActorKind, ActorAI};
 
 #[derive(Debug, Clone)]
 pub struct Actor {
@@ -10,6 +9,27 @@ pub struct Actor {
     pub ai: Option<ActorAI>,
     pub inventory: Inventory
 }
+
+pub type ActorId = Id<Actor>;
+pub type ActorMap = IdMap<Actor>;
+
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+pub enum ActorKind {
+    Player,
+    Cat,
+    Dog,
+    Townsfolk,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+pub enum ActorAI {
+    DoNothing,
+    WanderAround,
+}
+
+pub type Inventory = Vec<ItemId>;
 
 impl Actor {
     pub fn new<P>(kind: ActorKind, pos: P) -> Self
@@ -25,8 +45,11 @@ impl Actor {
 }
 
 
-pub type ActorId = Id<Actor>;
-pub type ActorMap = IdMap<Actor>;
 
-
-pub type Inventory = Vec<ItemId>;
+pub fn actor_index(actor: &Actor) -> usize {
+    match actor.kind {
+        ActorKind::Player => 2,
+        ActorKind::Townsfolk => 3,
+        _ => 1
+    }
+}

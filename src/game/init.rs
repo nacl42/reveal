@@ -1,8 +1,10 @@
-use crate::world::World;
-use crate::actor::{Actor, ActorId};
-use crate::item::*;
-use crate::point::Point;
-use crate::terrain::read_from_file;
+use crate::{
+    world::World,
+    actor::{Actor, ActorId, ActorKind},
+    item::*,
+    point::Point,
+    terrain::read_from_file
+};
 
 use super::*;
 

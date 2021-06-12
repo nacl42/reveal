@@ -2,9 +2,8 @@
 //! and their corresponding index in the tilesets.
 //!
 
-use super::{ActorKind, TerrainKind, TerrainFeature, Orientation};
+use super::{TerrainKind, TerrainFeature, Orientation};
 
-use crate::actor::{Actor};
 use crate::terrain::{Terrain};
 
 pub fn terrain_index(tile: &Terrain) -> usize {
@@ -41,11 +40,4 @@ pub fn feature_index(tile: &Terrain) -> Option<usize> {
     }
 }
 
-pub fn actor_index(actor: &Actor) -> usize {
-    match actor.kind {
-        ActorKind::Player => 2,
-        ActorKind::Townsfolk => 3,
-        _ => 1
-    }
-}
 
