@@ -5,16 +5,50 @@
 
 use crate::point::Point;
 use std::collections::HashMap;
-
-use crate::game::{TerrainKind, TerrainFeature};
 use rand::Rng;
 
-pub type TerrainMap = HashMap<Point, Terrain>;
 
 #[derive(Debug, Clone)]
 pub struct Terrain {
     pub kind: TerrainKind,
     pub feature: Option<TerrainFeature>,
+}
+
+
+pub type TerrainMap = HashMap<Point, Terrain>;
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TerrainKind {
+    Empty,
+    Grass,
+    ThickGrass,
+    Hedge,
+    Wall,
+    Water,
+    ShallowWater,
+    Window,
+    StoneFloor,
+    Path,
+    Door(DoorState),
+    Bridge(Orientation)
+}
+
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Orientation { Horizontal, Vertical }
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum DoorState { Open, Closed, Locked }
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TerrainFeature {
+    Mushroom,
+    Flower(u8),
+    Waterlily,
+    Stones
 }
 
 impl Terrain {
@@ -58,6 +92,33 @@ impl From<&TerrainKind> for Terrain {
 }
 
 
+impl TerrainKind {
+    pub fn random_decor(&self) -> Option<TerrainFeature> {
+        let mut rng = rand::thread_rng();
+        match self {
+            TerrainKind::Grass =>
+                Some(TerrainFeature::Flower(rng.gen_range(0..7))),
+            TerrainKind::ShallowWater =>
+                Some(TerrainFeature::Waterlily),
+            _ => None
+        }
+    }
+
+    pub fn is_blocking(&self, terrain: &Terrain) -> bool {
+        match self {
+            TerrainKind::Hedge | TerrainKind::Wall |
+            TerrainKind::Water | TerrainKind::Window => true,
+            TerrainKind::ShallowWater
+                if terrain.feature.as_ref().map(|f| f == &TerrainFeature::Waterlily).is_some()
+                => false,
+            TerrainKind::ShallowWater => true,
+            _ => false
+        }
+
+    }
+}
+
+
 /// Read terrain data from ascii file.
 /// A `map` is used to translate the single characters to a TerrainKind.
 /// Returns the constructed TerrainMap.
@@ -90,4 +151,38 @@ where P: AsRef<std::path::Path>
         y += 1;
     }
     return Ok(hashmap);    
+}
+
+pub fn terrain_index(tile: &Terrain) -> usize {
+    match tile.kind {
+        TerrainKind::Grass => 1,
+        TerrainKind::Path => 2,
+        TerrainKind::Water => 3,
+        TerrainKind::Wall => 4,
+        //Sand => 5,
+        TerrainKind::Hedge => 6,
+        TerrainKind::ThickGrass => 10,
+        TerrainKind::StoneFloor => 11,
+        TerrainKind::ShallowWater => 12,
+        // Grate => 13,
+        TerrainKind::Door(_) => 14,
+        TerrainKind::Window => 15,
+        TerrainKind::Bridge(Orientation::Vertical) => 16,
+        TerrainKind::Bridge(Orientation::Horizontal) => 17, // TODO
+        _ => 0,
+    }
+}
+
+pub fn feature_index(tile: &Terrain) -> Option<usize> {
+    if let Some(feature) = &tile.feature {
+        let index = match feature {
+            TerrainFeature::Mushroom => 20,
+            TerrainFeature::Flower(n) => (40 + (n % 4) as usize),
+            TerrainFeature::Stones => 10,
+            TerrainFeature::Waterlily => 30
+        };
+        Some(index)
+    } else {
+        None
+    }
 }

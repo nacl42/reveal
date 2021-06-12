@@ -1,9 +1,11 @@
 
-use crate::point::{Point, Rectangle, PointSet};
-use crate::item::{ItemMap, ItemId, UseResult};
-use crate::actor::{Actor, ActorMap, ActorId, ActorKind};
-use crate::terrain::{Terrain, TerrainMap};
-use crate::action::Action;
+use crate::{
+    point::{Point, Rectangle, PointSet},
+    item::{ItemMap, ItemId, UseResult},
+    actor::{Actor, ActorMap, ActorId, ActorKind},
+    terrain::{Terrain, TerrainMap, TerrainKind},
+    action::Action
+};
 
 use crate::game::*;
 

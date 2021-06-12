@@ -1,11 +1,10 @@
 
-use crate::game::tile_index::{terrain_index, feature_index};
-
 use crate::{
     item::item_index,
     world::{World, HighlightMode},
     point::{Point, Rectangle},
     actor::actor_index,
+    terrain::{terrain_index, feature_index}
 };
 
 use super::{Tileset};

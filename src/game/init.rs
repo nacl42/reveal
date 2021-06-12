@@ -1,6 +1,7 @@
 use crate::{
     world::World,
     actor::{Actor, ActorId, ActorKind},
+    terrain::{Terrain, TerrainKind, DoorState, Orientation},
     item::*,
     point::Point,
     terrain::read_from_file
