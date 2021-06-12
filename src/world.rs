@@ -7,7 +7,6 @@ use crate::{
     action::Action
 };
 
-use crate::game::*;
 
 #[derive(Debug)]
 pub struct World {

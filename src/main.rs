@@ -1,15 +1,16 @@
 use macroquad::prelude::*;
 
+mod action;
 mod actor;
-mod terrain;
-mod point;
-mod item;
-mod world;
+mod demo_game;
 mod flake;
 mod idmap;
-mod action;
+mod item;
+mod point;
 mod render;
-mod game;
+mod terrain;
+mod world;
+extern crate rand;
 
 use point::{Point, Rectangle};
 use world::{World, ViewportMode, adjust_viewport, HighlightMode};
@@ -647,7 +648,7 @@ async fn main() {
 
     // the World contains the actual game data
     let mut world = World::new();
-    game::init::populate_world(&mut world);
+    demo_game::populate_world(&mut world);
 
     // main loop
     let mut actions: Vec<Action> = vec!();
