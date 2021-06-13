@@ -53,6 +53,9 @@ pub fn populate_world(world: &mut World) {
     world.items.add(Item::new(ItemKind::Wand).with_pos((5, 6)));
     world.items.add(Item::new(ItemKind::Gold).with_pos(player.pos));
     world.items.add(Item::new(ItemKind::Ore).with_pos(player.pos));
+    world.items.add(Item::new(ItemKind::Bread).with_pos(player.pos));
+    world.items.add(Item::new(ItemKind::Money(20)).with_pos(player.pos));
+    world.items.add(Item::new(ItemKind::Wand).with_pos(player.pos));
     
     // spawn some random NPCs
     

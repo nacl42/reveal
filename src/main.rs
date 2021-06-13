@@ -18,6 +18,7 @@ use world::{World, ViewportMode, adjust_viewport, HighlightMode};
 use action::{Action, GuiAction};
 use pattern::Pattern;
 use actor::Inventory;
+use item::ItemId;
 use render::{
     Map, Tileset,
     TerrainLayer, ItemLayer, ActorLayer, HighlightLayer,
@@ -52,7 +53,7 @@ fn read_input_use_item(state: &MainState, world: &World) -> Vec<Action> {
     if is_key_pressed(KeyCode::Escape) {
         println!("switching back to default mode");
         actions.push(
-            Action::GUI(GuiAction::SwitchMode(MainInputMode::Default))
+            Action::GUI(GuiAction::SwitchMode(InputMode::Default))
         );
     }
 
@@ -65,7 +66,7 @@ fn read_input_use_item(state: &MainState, world: &World) -> Vec<Action> {
                 state.player_inventory_widget.screen_to_item_id(
                     &Vec2::from(mouse_position()), &player.inventory
                 ) {
-                    println!("Hovering over an inventory item");
+                    //println!("Hovering over an inventory item");
                 }
         }
     }
@@ -105,6 +106,49 @@ fn read_input_use_item(state: &MainState, world: &World) -> Vec<Action> {
     actions
 }
 
+pub enum InventorySelection {
+    None,
+    Cancel,
+    Item { item_id: ItemId }
+}
+
+
+fn read_input_from_inventory(widget: &InventoryWidget, inventory: &Inventory, world: &World) -> InventorySelection {
+
+    if is_key_pressed(KeyCode::Escape) {
+        println!("switching back to default mode");
+        return InventorySelection::Cancel;
+    }
+
+    // TODO: render cancel button
+    // maybe as last item in the list
+    // maybe cancel on right-click
+    
+    // check if we are hovering over an item
+    if true {
+        if let Some(item_id) =
+            widget.screen_to_item_id(
+                &Vec2::from(mouse_position()), &inventory
+            ) {
+                //println!("Hovering over an inventory item ({})",
+                //         world.items.get(&item_id).unwrap().description()
+                //);
+            }
+    }
+
+    // check if we have selected an item
+    if is_mouse_button_pressed(MouseButton::Left) {
+        if let Some(item_id) =
+            widget.screen_to_item_id(
+                &Vec2::from(mouse_position()), &inventory
+            ) {
+                return InventorySelection::Item{ item_id: *item_id };
+            }
+    }
+    
+    return InventorySelection::None;
+}
+
 fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
 
     let mut actions = Vec::<Action>::new();
@@ -119,7 +163,7 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
     if is_key_pressed(KeyCode::U) {
         println!("switching to use item mode");
         actions.push(
-            Action::GUI(GuiAction::SwitchMode(MainInputMode::UseItem))
+            Action::GUI(GuiAction::SwitchMode(InputMode::UseItem))
         );
     }
     
@@ -149,7 +193,7 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
     } else {
         // cursor keys (w/o shift) => move player
         let player_id = world.player_id();
-  
+        
         if is_key_down(KeyCode::Left) {
             if let Some(move_action) =
                 world::move_by(&world, &player_id, -1, 0, true) {
@@ -159,7 +203,7 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
                     actions.push(Action::Ouch);
                 }
         }
-    
+        
         if is_key_down(KeyCode::Up) {
             if let Some(move_action) =
                 world::move_by(&world, &player_id, 0, -1, true) {
@@ -179,7 +223,7 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
                     actions.push(Action::Ouch);
                 }
         }
-    
+        
         if is_key_down(KeyCode::Down) {
             if let Some(move_action) =
                 world::move_by(&world, &player_id, 0, 1, true) {
@@ -221,11 +265,48 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
         let player_id = world.player_id();
         if let Some(player) = world.actors.get(&player_id) {
             let items = world.item_ids_at(&player.pos);
-            actions.push(Action::PickUp {
-                actor_id: player_id,
-                items
-            });
-        };
+            match items.len() {
+                0 => println!("nothing to pick up!"),
+                1 => actions.push(Action::PickUp {
+                    actor_id: player_id,
+                    items
+                }),
+                _ => {
+                    let inventory = world.item_ids_at(&world.player_pos());
+                    let pattern = &Pattern::MatrixWithGaps {
+                        rows: 1, cols: inventory.len() as u16,
+                        width: 48.0, height: 48.0,
+                        sep_x: 2.0, sep_y: 2.0
+                    };
+                    let mut widget = InventoryWidget::new(
+                        vec2(0.0, 0.0),
+                        &pattern,
+                        false
+                    );
+
+                    let pos = world.player_pos();
+                    let map_pos = pos - state.viewport.top_left();
+                    if let Some(screen_pos) = state.main_map.tile_to_screen(&map_pos) {
+                        // TODO: adding the base here is a mess and will eventually
+                        // lead to an error. We should consider putting the offset
+                        // somewhere, where it is automatically used.
+                        let screen_pos = screen_pos + state.main_map_pos;
+                        // offset a little (height of a single inventory item),
+                        // so that the inventory is above the main player
+                        let screen_pos = screen_pos - vec2(0.0, 48.0);
+                        widget.set_pos(&screen_pos);
+
+                        actions.push(Action::GUI(
+                            GuiAction::SwitchMode(
+                                InputMode::PickUpItem { inventory, widget }
+                            )));
+                    } else {
+                        // TODO: proper error
+                        println!("error: cannot render inventory as actor is not visible on screen");
+                    }
+                }
+            }
+        }
     }
 
     actions
@@ -249,11 +330,11 @@ pub struct MainState {
     material_bw: Material,
     params_info: TextParams,
     main_map: Map,
+    main_map_pos: Vec2,
     mini_map: Map,
     player_inventory_widget: InventoryWidget,
-    terrain_inventory_widget: InventoryWidget,
     item_tileset: Tileset,
-    input_mode: MainInputMode
+    input_mode: InputMode
 }
 
 #[derive(Debug)]
@@ -262,9 +343,10 @@ pub enum MainStateError {
 }
 
 #[derive(Debug)]
-pub enum MainInputMode {
+pub enum InputMode {
     Default,
     UseItem,
+    PickUpItem { inventory: Inventory, widget: InventoryWidget },
 }
 
 impl MainState {
@@ -333,12 +415,6 @@ impl MainState {
             true
         );
 
-        let terrain_inventory_widget = InventoryWidget::new(
-            player_inventory_widget.top_left() - vec2(0.0, 64.0),
-            &Pattern::MatrixWithGaps { rows: 1, cols: 3, width: 48.0, height: 48.0, sep_x: 2.0, sep_y: 2.0 },
-            false
-        );
-
         // TODO: share tilesets among different rendering widgets
         let item_tileset = Tileset::new(
             "assets/items32.png", &pattern
@@ -353,7 +429,6 @@ impl MainState {
             show_help: false,
             show_status: true,
             player_inventory_widget,
-            terrain_inventory_widget,
             item_tileset,
             viewport,
             border_size: Point::from((10, 10)),
@@ -363,8 +438,9 @@ impl MainState {
             material_bw,
             params_info,
             main_map,
+            main_map_pos: vec2(0.0, 32.0),
             mini_map,
-            input_mode: MainInputMode::Default
+            input_mode: InputMode::Default
         };
 
         Ok(state)
@@ -419,11 +495,11 @@ impl MainState {
                 },
                 Action::UseItem { item_id, target } => {
                     world.use_item(&item_id, &target);
-                    self.input_mode = MainInputMode::Default;
+                    self.input_mode = InputMode::Default;
                 },
                 Action::DropItem { item_id } => {
                     world.drop_item(&item_id);
-                    self.input_mode = MainInputMode::Default;
+                    self.input_mode = InputMode::Default;
                 }
                 Action::MoveViewport { dx, dy } => {
                     if dy != 0 {
@@ -499,7 +575,7 @@ impl MainState {
             }
         }
     }
-   
+    
     fn render(&mut self, world: &World) {
         clear_background(BLACK);
 
@@ -508,20 +584,21 @@ impl MainState {
         
         // select material for map depending on input mode
         match self.input_mode {
-            MainInputMode::Default
+            InputMode::Default
                 => gl_use_material(self.material_vignette),
-            MainInputMode::UseItem
-                => gl_use_material(self.material_bw)
+            InputMode::UseItem | InputMode::PickUpItem { .. }
+            => gl_use_material(self.material_bw),
         };
 
-        //let base = vec2(10.0, 70.0);
-        let base = vec2(0.0, 32.0);
         let texture = self.main_map.texture();
 
         // EXPERIMENTAL
         // TODO: do we copy the texture here?
         draw_texture_ex(
-            *texture, base.x, base.y, WHITE,
+            *texture,
+            self.main_map_pos.x,
+            self.main_map_pos.y,
+            WHITE,
             DrawTextureParams {
                 flip_y: true, // this is a temporary workaround
                 dest_size: Some(self.main_map.target_size()),
@@ -533,7 +610,7 @@ impl MainState {
         self.mini_map.render_to_target(&world, &self.viewport.top_left());
 
         let texture = self.mini_map.texture();
-        let map_pos = base + vec2(
+        let map_pos = self.main_map_pos + vec2(
             screen_width() - texture.width() - 10.0,
             10.0
         );
@@ -562,7 +639,7 @@ impl MainState {
             if text.len() > 0 {
                 let pos = pos + Vec2::from((80.0, 0.0));
                 draw_text_ex(&text, pos.x, pos.y, self.params_info);
-            
+                
                 let text = "use <p> to pick up the items";
                 let pos = pos + Vec2::from((0.0, 30.0));
                 draw_text_ex(&text, pos.x, pos.y, self.params_info);
@@ -574,7 +651,7 @@ impl MainState {
         let max_messages = 5;
         let mut pos = vec2(20.0, 20.0);
         let yoffset = 1.1 * msg_params.font_size as f32;
-    
+        
         for message in self.messages.iter().take(max_messages) {
             draw_text_ex(&message, pos.x, pos.y, msg_params);
             msg_params.color.a *= 0.7; // blend out color
@@ -585,16 +662,19 @@ impl MainState {
         if let Some(player) = world.actors.get(&world.player_id()) {
             self.player_inventory_widget.render(
                 &world,
-                &player.inventory, &self.item_tileset
+                &player.inventory,
+                &self.item_tileset
             );
         }
 
-        
-        let terrain_inv = world.item_ids_at(&world.player_pos());
-        self.terrain_inventory_widget.render(
-            &world,
-            &terrain_inv, &self.item_tileset
-        )
+
+        // TODO: move screenpos into PickUpItem
+        match &self.input_mode {
+            InputMode::PickUpItem { inventory, widget }  => {
+                widget.render(&world, &inventory, &self.item_tileset);
+            },
+            _ => {}
+        }
     }
 }
 
@@ -635,11 +715,20 @@ async fn main() {
         {
             state.last_input = get_time();
 
-            match state.input_mode {
-                MainInputMode::Default
+            match &state.input_mode {
+                InputMode::Default
                     => actions.extend(read_input_default(&state, &world)),
-                MainInputMode::UseItem
+                InputMode::UseItem
                     => actions.extend(read_input_use_item(&state, &world)),
+                InputMode::PickUpItem { inventory, widget } =>
+                    match read_input_from_inventory(&widget, &inventory, &world) {
+                        InventorySelection::Cancel => actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default))),
+                        InventorySelection::Item { item_id } => {
+                            actions.push(Action::PickUp { actor_id: world.player_id(), items: vec!(item_id) } );
+                            actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
+                        },
+                        InventorySelection::None => {}
+                    }
             }
         }
 

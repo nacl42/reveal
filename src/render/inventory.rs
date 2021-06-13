@@ -12,6 +12,7 @@ use crate::{
 use super::tileset::Tileset;
 
 
+#[derive(Debug)]
 pub struct InventoryWidget {
     pos: Vec2,
     destinations: Vec<Rect>,
@@ -29,6 +30,10 @@ impl InventoryWidget {
 
     pub fn top_left(&self) -> Vec2 {
         vec2(self.pos.x, self.pos.y)
+    }
+
+    pub fn set_pos(&mut self, pos: &Vec2) {
+        self.pos = pos.clone();
     }
     
     pub fn render(&self, world: &World, inventory: &Inventory, tileset: &Tileset) {

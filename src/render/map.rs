@@ -40,6 +40,16 @@ impl Map {
             Some(Point::new(tx as i32, ty as i32))
         }
     }
+
+    pub fn tile_to_screen(&self, tile: &Point) -> Option<Vec2> {
+        let sx = tile.x as f32 * (self.tile_size.x + self.tile_sep.x);
+        let sy = tile.y as f32 * (self.tile_size.y + self.tile_sep.y);
+        if (sx < 0.0) || (sy < 0.0) || (sx > screen_width()) || (sy > screen_height()) {
+            None
+        } else {
+            Some(vec2(sx, sy))
+        }
+    }
     
     pub fn add_layer(&mut self, layer: Box<dyn MapLayer>) {
         self.layers.push(layer);
