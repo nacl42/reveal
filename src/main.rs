@@ -18,7 +18,8 @@ use action::{Action, GuiAction};
 use render::{
     Map, Tileset, Pattern,
     TerrainLayer, ItemLayer, ActorLayer, HighlightLayer,
-    InventoryWidget
+    InventoryWidget,
+    egui
 };
 
 use std::collections::{VecDeque};
@@ -228,87 +229,8 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
 }
 
 
-/// process egui events
-fn render_and_update_egui(ld: &mut MainState, world: &World) {
 
-    ld.egui_has_focus = false;
-    
-    egui_macroquad::ui(|egui_ctx| {
-
-        // status window
-        if ld.show_status {
-            egui::Window::new("player")
-                .default_pos([0.0, screen_height()])
-                .resizable(false)
-                .collapsible(false)
-                .show(egui_ctx, |ui| {
-                    // actor position
-                    if let Some(player) = world.actors.get(&world.player_id()) {
-                        ui.label(format!("position: {}, {}",
-                                         player.pos.x,
-                                         player.pos.y
-                        ));
-                        ui.label(format!("viewport: {}, {}, {}, {}",
-                                         ld.viewport.x1,
-                                         ld.viewport.y1,
-                                         ld.viewport.x2,
-                                         ld.viewport.y2
-                        ));
-                        ui.label(format!("game time: {}",
-                                         world.time
-                        ));
-                    }
-                });
-        };
-            
-        // help window
-        if ld.show_help {
-            egui::Window::new("help")
-                .default_pos([screen_width(), screen_height() / 3.0])
-                .resizable(false)
-                .collapsible(false)
-                .show(egui_ctx, |ui| {
-                    ui.label("arrow keys - move around");
-                    ui.label("i - show/hide inventory");
-                    ui.label("p - pick up items");
-                    ui.label("c - center viewport");
-                    ui.label("shift + arrow keys - scroll map");
-                    ui.label("h - show/hide help");
-                    ui.label("s - show/hide status");
-                    ui.label("f - show/hide field of view");
-                    ui.label("q - quit");
-                });
-        };
-            
-        if ld.show_inventory {
-            egui::Window::new("You carry the following items:")
-                .default_pos([screen_width(), screen_height()])
-                .resizable(false)
-                .collapsible(false)
-                .show(egui_ctx, |ui| {
-                    //ui.label("You carry the following items:");
-                    // let response = ui.add(
-                    //     egui::TextEdit::singleline(&mut player_name)
-                    //         .hint_text("Enter your name here")
-                    // );
-                    // egui_has_focus |= response.has_focus();
-                    
-                    //ui.separator();
-                    if let Some(player) = &world.actors.get(&world.player_id()) {
-                        for (n, item_id) in player.inventory.iter().enumerate() {
-                            if let Some(item) = &world.items.get(&item_id) {
-                                ui.label(format!("{n} - {text}", n=n+1, text=item.description()));
-                            }
-                        }
-                    }
-                });
-        }
-    });
-}
-
-
-
-struct MainState {
+pub struct MainState {
     quit: bool,
     last_input: f64,
     end_of_turn: f64,
@@ -682,7 +604,7 @@ async fn main() {
 
     while !state.quit {
 
-        render_and_update_egui(&mut state, &world);
+        egui::render_and_update_egui(&mut state, &world);
 
         // Update, if necessary.
         // Only update every DELTA_UPDATE intervals.
