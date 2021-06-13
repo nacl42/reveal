@@ -6,6 +6,7 @@ mod demo_game;
 mod flake;
 mod idmap;
 mod item;
+mod pattern;
 mod point;
 mod render;
 mod terrain;
@@ -15,8 +16,9 @@ extern crate rand;
 use point::{Point, Rectangle};
 use world::{World, ViewportMode, adjust_viewport, HighlightMode};
 use action::{Action, GuiAction};
+use pattern::Pattern;
 use render::{
-    Map, Tileset, Pattern,
+    Map, Tileset,
     TerrainLayer, ItemLayer, ActorLayer, HighlightLayer,
     InventoryWidget,
     egui
@@ -278,7 +280,7 @@ impl MainState {
         let (width, height) = (32.0, 32.0);
         let pattern = Pattern::Matrix {
             width, height,
-            columns: 10, rows: 10
+            cols: 10, rows: 10
         };
 
         // TODO: screen_width() and screen_height() return only the
@@ -324,7 +326,8 @@ impl MainState {
 
         // inventory
         let inventory_widget = InventoryWidget::new(
-            vec2(screen_width()/2.0, screen_height() - 130.0)
+            vec2(screen_width()/2.0, screen_height() - 64.0),
+            &Pattern::MatrixWithGaps { rows: 1, cols: 5, width: 48.0, height: 48.0, sep_x: 2.0, sep_y: 2.0 }
         );
 
         // TODO: share tilesets among different rendering widgets

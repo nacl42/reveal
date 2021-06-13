@@ -6,6 +6,7 @@ use crate::{
     actor::Inventory,
     item::{ItemId, item_index},
     world::World,
+    pattern::Pattern,
 };
 
 use super::tileset::Tileset;
@@ -17,25 +18,13 @@ pub struct InventoryWidget {
 }
 
 impl InventoryWidget {
-    pub fn new(pos: Vec2) -> Self {
+    pub fn new(pos: Vec2, pattern: &Pattern) -> Self {
         let (width, height, sep_x, sep_y) = (64.0, 64.0, 2.0, 2.0);
         let (rows, cols) = (2, 5);
         
-        let mut destinations = Vec::<Rect>::new();
-        let mut rect = Rect::new(0.0, 0.0, width, height);
-
-        for _y in 0..rows {
-            for _x in 0..cols {
-                destinations.push(rect);
-                rect.x += width + sep_x;
-            }
-            rect.x = 0.0;
-            rect.y += height + sep_y;
-        }
-
         Self {
             pos,
-            destinations
+            destinations: pattern.all_sources()
         }
     }
 
