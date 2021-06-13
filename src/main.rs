@@ -41,7 +41,7 @@ fn window_conf() -> Conf {
         window_title: "Reveal".to_owned(),
         window_width: 1024,
         window_height: 800,
-        fullscreen: true,
+        //fullscreen: true,
         ..Default::default()
     }
 }
@@ -51,7 +51,8 @@ fn window_conf() -> Conf {
 pub enum InventorySelection {
     None,
     Cancel,
-    Item { item_id: ItemId }
+    Item { item_id: ItemId },
+    Hover { item_id: ItemId }
 }
 
 
@@ -66,18 +67,6 @@ fn read_input_from_inventory(widget: &InventoryWidget, inventory: &Inventory, wo
     // maybe as last item in the list
     // maybe cancel on right-click
     
-    // check if we are hovering over an item
-    if true {
-        if let Some(item_id) =
-            widget.screen_to_item_id(
-                &Vec2::from(mouse_position()), &inventory
-            ) {
-                //println!("Hovering over an inventory item ({})",
-                //         world.items.get(&item_id).unwrap().description()
-                //);
-            }
-    }
-
     // check if we have selected an item
     if is_mouse_button_pressed(MouseButton::Left) {
         if let Some(item_id) =
@@ -87,6 +76,14 @@ fn read_input_from_inventory(widget: &InventoryWidget, inventory: &Inventory, wo
                 return InventorySelection::Item{ item_id: *item_id };
             }
     }
+
+    // check if we are hovering over an item
+    if let Some(item_id) =
+        widget.screen_to_item_id(
+            &Vec2::from(mouse_position()), &inventory
+        ) {
+            return InventorySelection::Hover { item_id: *item_id };
+        }
     
     return InventorySelection::None;
 }
@@ -218,7 +215,7 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
             let screen_pos = screen_pos - vec2(0.0, 48.0);
             widget.set_pos(&screen_pos);
 
-            actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::UseItem { inventory, widget } )));
+            actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::UseItem { inventory, widget, hover: None } )));
         } else {
             println!("error: ") // TODO
         }
@@ -248,7 +245,7 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
             let screen_pos = screen_pos - vec2(0.0, 48.0);
             widget.set_pos(&screen_pos);
 
-            actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::DropItem { inventory, widget } )));
+            actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::DropItem { inventory, widget, hover: None } )));
         } else {
             println!("error: ") // TODO
         }
@@ -292,7 +289,7 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
 
                         actions.push(Action::GUI(
                             GuiAction::SwitchMode(
-                                InputMode::PickUpItem { inventory, widget }
+                                InputMode::PickUpItem { inventory, widget, hover: None }
                             )));
                     } else {
                         // TODO: proper error
@@ -338,9 +335,9 @@ pub enum MainStateError {
 #[derive(Debug)]
 pub enum InputMode {
     Default,
-    UseItem { inventory: Inventory, widget: InventoryWidget },
-    PickUpItem { inventory: Inventory, widget: InventoryWidget },
-    DropItem { inventory: Inventory, widget: InventoryWidget },
+    UseItem { inventory: Inventory, widget: InventoryWidget, hover: Option<ItemId> },
+    PickUpItem { inventory: Inventory, widget: InventoryWidget, hover: Option<ItemId> },
+    DropItem { inventory: Inventory, widget: InventoryWidget, hover: Option<ItemId> },
 }
 
 impl MainState {
@@ -645,19 +642,40 @@ impl MainState {
         };
 
         match &self.input_mode {
-            InputMode::PickUpItem { inventory, widget }  => {
+            InputMode::PickUpItem { inventory, widget, hover }  => {
                 let pos = widget.top_left() - vec2(0.0, self.params_info.font_size as f32); // TODO: height of tile - extra offset
-                draw_text_ex(&format!("pick up"), pos.x, pos.y, self.params_info);
+                let label = match hover {
+                    Some(hovered_id) => {
+                        let item = world.items.get(&hovered_id).unwrap();
+                        format!("pick up {}", item.description())
+                    },
+                    None => format!("pick up")
+                };
+                draw_text_ex(&label, pos.x, pos.y, self.params_info);
                 widget.render(&world, &inventory, &self.item_tileset);
             },
-            InputMode::UseItem { inventory, widget } => {
+            InputMode::UseItem { inventory, widget, hover } => {
                 let pos = widget.top_left() - vec2(0.0, self.params_info.font_size as f32); // TODO: height of tile - extra offset
-                draw_text_ex(&format!("use"), pos.x, pos.y, self.params_info);
+                let label = match hover {
+                    Some(hovered_id) => {
+                        let item = world.items.get(&hovered_id).unwrap();
+                        format!("use {}", item.description())
+                    },
+                    None => format!("use")
+                };
+                draw_text_ex(&label, pos.x, pos.y, self.params_info);
                 widget.render(&world, &inventory, &self.item_tileset);
             },
-            InputMode::DropItem { inventory, widget } => {
+            InputMode::DropItem { inventory, widget, hover } => {
                 let pos = widget.top_left() - vec2(0.0, self.params_info.font_size as f32); // TODO: height of tile - extra offset
-                draw_text_ex(&format!("drop"), pos.x, pos.y, self.params_info);
+                let label = match hover {
+                    Some(hovered_id) => {
+                        let item = world.items.get(&hovered_id).unwrap();
+                        format!("drop {}", item.description())
+                    },
+                    None => format!("drop")
+                };
+                draw_text_ex(&label, pos.x, pos.y, self.params_info);
                 widget.render(&world, &inventory, &self.item_tileset);
             },
             _ => {}
@@ -702,35 +720,50 @@ async fn main() {
         {
             state.last_input = get_time();
 
-            match &state.input_mode {
+            match &mut state.input_mode {
                 InputMode::Default
                     => actions.extend(read_input_default(&state, &world)),
-                InputMode::UseItem { inventory, widget } =>
+                InputMode::UseItem { inventory, widget, hover } =>
                     match read_input_from_inventory(&widget, &inventory, &world) {
                         InventorySelection::Cancel => actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default))),
                         InventorySelection::Item { item_id } => {
                             actions.push(Action::UseItem { target: world.player_id(), item_id: item_id });
                             actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
                         },
-                        InventorySelection::None => {}
+                        InventorySelection::Hover { item_id } => {
+                            hover.replace(item_id);
+                        },
+                        InventorySelection::None => {
+                            *hover = None;
+                        }
                     },                    
-                InputMode::PickUpItem { inventory, widget } =>
+                InputMode::PickUpItem { inventory, widget, hover } =>
                     match read_input_from_inventory(&widget, &inventory, &world) {
                         InventorySelection::Cancel => actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default))),
                         InventorySelection::Item { item_id } => {
                             actions.push(Action::PickUp { actor_id: world.player_id(), items: vec!(item_id) } );
                             actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
                         },
-                        InventorySelection::None => {}
+                        InventorySelection::Hover { item_id } => {
+                            hover.replace(item_id);
+                        },
+                        InventorySelection::None => {
+                            *hover = None;
+                        }
                     },
-                InputMode::DropItem { inventory, widget } =>
+                InputMode::DropItem { inventory, widget, hover } =>
                     match read_input_from_inventory(&widget, &inventory, &world) {
                         InventorySelection::Cancel => actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default))),
                         InventorySelection::Item { item_id } => {
                             actions.push(Action::DropItem { item_id });
                             actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
                         },
-                        InventorySelection::None => {}
+                        InventorySelection::Hover { item_id } => {
+                            hover.replace(item_id);
+                        },
+                        InventorySelection::None => {
+                            *hover = None;
+                        }
                     }
             }
         }
