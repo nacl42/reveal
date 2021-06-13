@@ -77,6 +77,27 @@ fn read_input_from_inventory(widget: &InventoryWidget, inventory: &Inventory, wo
             }
     }
 
+    // check if we have pushed a key and selected an item
+    if let Some(key) = match get_last_key_pressed() {
+        Some(KeyCode::Key1) => Some('1'),
+        Some(KeyCode::Key2) => Some('2'),
+        Some(KeyCode::Key3) => Some('3'),
+        Some(KeyCode::Key4) => Some('4'),
+        Some(KeyCode::Key5) => Some('5'),
+        Some(KeyCode::Key6) => Some('6'),
+        Some(KeyCode::Key7) => Some('7'),
+        Some(KeyCode::Key8) => Some('8'),
+        Some(KeyCode::Key9) => Some('9'),
+        Some(KeyCode::Key0) => Some('0'),
+        _ => None,
+    } {
+        if let Some(item_id) = widget.key_to_item_id(key, &inventory) {
+            return InventorySelection::Item{ item_id: *item_id };
+        }
+    }
+
+    
+
     // check if we are hovering over an item
     if let Some(item_id) =
         widget.screen_to_item_id(
@@ -201,7 +222,7 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
             width: 48.0, height: 48.0,
             sep_x: 2.0, sep_y: 2.0
         };
-        let mut widget = InventoryWidget::new(vec2(0.0, 0.0), &pattern, false);
+        let mut widget = InventoryWidget::new(vec2(0.0, 0.0), &pattern, false, state.params_slots.clone());
 
         let pos = world.player_pos();
         let map_pos = pos - state.viewport.top_left();
@@ -231,7 +252,7 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
             width: 48.0, height: 48.0,
             sep_x: 2.0, sep_y: 2.0
         };
-        let mut widget = InventoryWidget::new(vec2(0.0, 0.0), &pattern, false);
+        let mut widget = InventoryWidget::new(vec2(0.0, 0.0), &pattern, false, state.params_slots.clone());
 
         let pos = world.player_pos();
         let map_pos = pos - state.viewport.top_left();
@@ -269,11 +290,7 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
                         width: 48.0, height: 48.0,
                         sep_x: 2.0, sep_y: 2.0
                     };
-                    let mut widget = InventoryWidget::new(
-                        vec2(0.0, 0.0),
-                        &pattern,
-                        false
-                    );
+                    let mut widget = InventoryWidget::new(vec2(0.0, 0.0), &pattern, false, state.params_slots.clone());
 
                     let pos = world.player_pos();
                     let map_pos = pos - state.viewport.top_left();
@@ -320,6 +337,7 @@ pub struct MainState {
     material_vignette: Material,
     material_bw: Material,
     params_info: TextParams,
+    params_slots: TextParams,
     main_map: Map,
     main_map_pos: Vec2,
     mini_map: Map,
@@ -351,6 +369,8 @@ impl MainState {
             color: WHITE,
             ..Default::default()
         };
+
+        let params_slots = TextParams { font, font_size: 16, color: WHITE, ..Default::default() };
 
         let (width, height) = (32.0, 32.0);
         let pattern = Pattern::Matrix {
@@ -420,6 +440,7 @@ impl MainState {
             material_vignette,
             material_bw,
             params_info,
+            params_slots,
             main_map,
             main_map_pos: vec2(0.0, 32.0),
             mini_map,
