@@ -34,15 +34,6 @@ pub fn populate_world(world: &mut World) {
 
     let player_id = world.player_id();
     
-    // item map (just an example)
-    let item1 = Item::new(ItemKind::Money(10)).with_pos((5, 6));
-    let item2 = Item::new(ItemKind::Wand).with_pos((12, 10));
-    world.items.add(item1);
-    world.items.add(item2);
-    
-    let item5 = Item::new(ItemKind::Wand).with_pos((5, 6));
-    world.items.add(item5);
-
     // add some items to player's inventory
     let magical_wand = Item::new(ItemKind::Wand)
         .with_owner(player_id);
@@ -55,6 +46,13 @@ pub fn populate_world(world: &mut World) {
     player.inventory.push(world.items.add(magical_wand));
     player.inventory.push(world.items.add(some_money));
     player.inventory.push(world.items.add(healing_potion));
+
+    // spawn some more items on the map (just as an example)
+    world.items.add(Item::new(ItemKind::Money(10)).with_pos((5, 6)));
+    world.items.add(Item::new(ItemKind::Wand).with_pos((12, 10)));
+    world.items.add(Item::new(ItemKind::Wand).with_pos((5, 6)));
+    world.items.add(Item::new(ItemKind::Gold).with_pos(player.pos));
+    world.items.add(Item::new(ItemKind::Ore).with_pos(player.pos));
     
     // spawn some random NPCs
     

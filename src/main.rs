@@ -17,6 +17,7 @@ use point::{Point, Rectangle};
 use world::{World, ViewportMode, adjust_viewport, HighlightMode};
 use action::{Action, GuiAction};
 use pattern::Pattern;
+use actor::Inventory;
 use render::{
     Map, Tileset,
     TerrainLayer, ItemLayer, ActorLayer, HighlightLayer,
@@ -61,7 +62,7 @@ fn read_input_use_item(state: &MainState, world: &World) -> Vec<Action> {
     if false {
         if let Some(player) = &world.actors.get(&world.player_id()) {
             if let Some(item_id) =
-                state.inventory_widget.screen_to_item_id(
+                state.player_inventory_widget.screen_to_item_id(
                     &Vec2::from(mouse_position()), &player.inventory
                 ) {
                     println!("Hovering over an inventory item");
@@ -73,7 +74,7 @@ fn read_input_use_item(state: &MainState, world: &World) -> Vec<Action> {
     if is_mouse_button_pressed(MouseButton::Left) {
         if let Some(player) = &world.actors.get(&world.player_id()) {
             if let Some(item_id) =
-                state.inventory_widget.screen_to_item_id(
+                state.player_inventory_widget.screen_to_item_id(
                     &Vec2::from(mouse_position()), &player.inventory
                 ) {
                     if let Some(item) = world.items.get(item_id) {
@@ -88,7 +89,7 @@ fn read_input_use_item(state: &MainState, world: &World) -> Vec<Action> {
     } else if is_mouse_button_pressed(MouseButton::Right) {
         if let Some(player) = &world.actors.get(&world.player_id()) {
             if let Some(item_id) =
-                state.inventory_widget.screen_to_item_id(
+                state.player_inventory_widget.screen_to_item_id(
                     &Vec2::from(mouse_position()), &player.inventory
                 ) {
                     if let Some(item) = world.items.get(item_id) {
@@ -249,7 +250,8 @@ pub struct MainState {
     params_info: TextParams,
     main_map: Map,
     mini_map: Map,
-    inventory_widget: InventoryWidget,
+    player_inventory_widget: InventoryWidget,
+    terrain_inventory_widget: InventoryWidget,
     item_tileset: Tileset,
     input_mode: MainInputMode
 }
@@ -325,9 +327,16 @@ impl MainState {
         ).unwrap();
 
         // inventory
-        let inventory_widget = InventoryWidget::new(
+        let player_inventory_widget = InventoryWidget::new(
             vec2(screen_width()/2.0, screen_height() - 64.0),
-            &Pattern::MatrixWithGaps { rows: 1, cols: 5, width: 48.0, height: 48.0, sep_x: 2.0, sep_y: 2.0 }
+            &Pattern::MatrixWithGaps { rows: 1, cols: 5, width: 48.0, height: 48.0, sep_x: 2.0, sep_y: 2.0 },
+            true
+        );
+
+        let terrain_inventory_widget = InventoryWidget::new(
+            player_inventory_widget.top_left() - vec2(0.0, 64.0),
+            &Pattern::MatrixWithGaps { rows: 1, cols: 3, width: 48.0, height: 48.0, sep_x: 2.0, sep_y: 2.0 },
+            false
         );
 
         // TODO: share tilesets among different rendering widgets
@@ -343,7 +352,8 @@ impl MainState {
             show_inventory: false,
             show_help: false,
             show_status: true,
-            inventory_widget,
+            player_inventory_widget,
+            terrain_inventory_widget,
             item_tileset,
             viewport,
             border_size: Point::from((10, 10)),
@@ -573,11 +583,18 @@ impl MainState {
 
         // render inventory
         if let Some(player) = world.actors.get(&world.player_id()) {
-            self.inventory_widget.render(
+            self.player_inventory_widget.render(
                 &world,
                 &player.inventory, &self.item_tileset
             );
         }
+
+        
+        let terrain_inv = world.item_ids_at(&world.player_pos());
+        self.terrain_inventory_widget.render(
+            &world,
+            &terrain_inv, &self.item_tileset
+        )
     }
 }
 
