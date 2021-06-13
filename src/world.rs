@@ -96,6 +96,18 @@ impl World {
                     // discard result
                     let _ = self.items.replace(&item_id, item);
                 },
+                UseResult::Drop => {
+                    // remove item from owner's inventory
+                    if let Some(owner_id) = item.owner {
+                        if let Some(inventory) = self.actors.get_mut(&owner_id).map(|p| &mut p.inventory) {
+                            inventory.retain(|&x| x != *item_id)
+                        }
+                        // then set position of item to owner's position
+                        if let Some(owner) = self.actors.get(&owner_id) {
+                            item.pos = Some(owner.pos);
+                        }
+                    }
+                }
                 _ => {}
             }
         }

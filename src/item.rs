@@ -33,10 +33,12 @@ pub enum Potion {
     Healing
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum UseResult {
     UsedUp,
     Replace,
+    Drop,
     Cancel
 }
 
