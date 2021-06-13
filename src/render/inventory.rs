@@ -22,8 +22,8 @@ impl InventoryWidget {
     pub fn new(pos: Vec2, pattern: &Pattern, render_empty: bool) -> Self {
         Self {
             pos,
-            destinations: pattern.all_sources(),
-            render_empty: false
+            destinations: pattern.all_rects(),
+            render_empty
         }
     }
 

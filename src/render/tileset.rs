@@ -18,7 +18,7 @@ impl Tileset {
         Ok(
             Tileset {
                 texture,
-                sources: pattern.all_sources(),
+                sources: pattern.all_rects(),
             }
         )
     }

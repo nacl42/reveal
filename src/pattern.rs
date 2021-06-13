@@ -29,13 +29,13 @@ impl Pattern {
         }
     }
 
-    pub fn all_sources(&self) -> Vec<Rect> {
-        let mut sources: Vec<Rect> = vec!();
+    pub fn all_rects(&self) -> Vec<Rect> {
+        let mut rects: Vec<Rect> = vec!();
         match self {
             &Pattern::Matrix { rows, cols, width, height } => {
                 for y in 0..rows {
                     for x in 0..cols {
-                        sources.push(Rect::new(
+                        rects.push(Rect::new(
                             x as f32 * width, y as f32 * height,
                             width, height
                         ));
@@ -45,7 +45,7 @@ impl Pattern {
             &Pattern::MatrixWithGaps { rows, cols, width, height, sep_x, sep_y } => {
                 for y in 0..rows {
                     for x in 0..cols {
-                        sources.push(Rect::new(
+                        rects.push(Rect::new(
                             x as f32 * (width+sep_x), y as f32 * (height+sep_y),
                             width, height
                         ));
@@ -54,7 +54,7 @@ impl Pattern {
             }
 
         }
-        sources
+        rects
     }
 }
 
