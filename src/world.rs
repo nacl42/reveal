@@ -10,14 +10,15 @@ use crate::{
 
 #[derive(Debug)]
 pub struct World {
+    // first-class objects (provide Id's)
     pub actors: ActorMap,
     pub items: ItemMap,
+    //
     pub terrain: TerrainMap,
     player_id: ActorId,
     pub time: i32,
     pub highlight_mode: Option<HighlightMode>,
-    pub highlights: PointSet
-    //pub tiles: TileMap
+    pub highlights: PointSet,        
 }
 
 impl World {
@@ -37,8 +38,6 @@ impl World {
             //tiles: TileMap::new(),
         }
     }
-
-
     
     pub fn player_id(&self) -> ActorId {
         self.player_id
@@ -125,6 +124,44 @@ impl World {
                     item.pos = Some(owner.pos);
                 }
             }
+        }
+    }
+
+    pub fn update_fov(&mut self, actor_id: &ActorId) {
+        if let Some(actor) = self.actors.get_mut(actor_id) {
+            actor.fov.clear();
+            actor.fov.insert(actor.pos);
+            
+            actor.fov.insert(actor.pos.offset(-2, -2));
+            actor.fov.insert(actor.pos.offset(-2, -1));
+            actor.fov.insert(actor.pos.offset(-2, 0));
+            actor.fov.insert(actor.pos.offset(-2, 1));
+            actor.fov.insert(actor.pos.offset(-2, 2));
+
+            actor.fov.insert(actor.pos.offset(-1, -2));
+            actor.fov.insert(actor.pos.offset(-1, -1));
+            actor.fov.insert(actor.pos.offset(-1, 0));
+            actor.fov.insert(actor.pos.offset(-1, 1));
+            actor.fov.insert(actor.pos.offset(-1, 2));
+
+            actor.fov.insert(actor.pos.offset(0, -2));
+            actor.fov.insert(actor.pos.offset(0, -1));
+            actor.fov.insert(actor.pos.offset(0, 0));
+            actor.fov.insert(actor.pos.offset(0, 1));
+            actor.fov.insert(actor.pos.offset(0, 2));
+
+            actor.fov.insert(actor.pos.offset(1, -2));
+            actor.fov.insert(actor.pos.offset(1, -1));
+            actor.fov.insert(actor.pos.offset(1, 0));
+            actor.fov.insert(actor.pos.offset(1, 1));
+            actor.fov.insert(actor.pos.offset(1, 2));
+
+            actor.fov.insert(actor.pos.offset(2, -2));
+            actor.fov.insert(actor.pos.offset(2, -1));
+            actor.fov.insert(actor.pos.offset(2, 0));
+            actor.fov.insert(actor.pos.offset(2, 1));
+            actor.fov.insert(actor.pos.offset(2, 2));
+
         }
     }
 }

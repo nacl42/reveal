@@ -19,12 +19,7 @@ use action::{Action, GuiAction};
 use pattern::Pattern;
 use actor::Inventory;
 use item::ItemId;
-use render::{
-    Map, Tileset,
-    TerrainLayer, ItemLayer, ActorLayer, HighlightLayer,
-    InventoryWidget,
-    egui
-};
+use render::{Map, Tileset, Layer, InventoryWidget, egui };
 
 use std::collections::{VecDeque};
 
@@ -386,26 +381,26 @@ impl MainState {
         let viewport = Rectangle::from((0, 0, vw, vh-3));
 
         let mut main_map = Map::new(width, height, Point::new(vw, vh));
-        main_map.add_layer(Box::new(TerrainLayer {
+        main_map.add_layer(Layer::Terrain {
             terrains: Tileset::new("assets/terrain32.png", &pattern).await.unwrap(),
             features: Tileset::new("assets/features32.png", &pattern).await.unwrap(),
-        }));
-        main_map.add_layer(Box::new(ItemLayer {
+        });
+        main_map.add_layer(Layer::Item {
             tileset: Tileset::new("assets/items32.png", &pattern).await.unwrap()
-        }));
-        main_map.add_layer(Box::new(ActorLayer {
+        });
+        main_map.add_layer(Layer::Actor {
             tileset: Tileset::new("assets/actors32.png", &pattern).await.unwrap()
-        }));
+        });
 
-        main_map.add_layer(Box::new(HighlightLayer()));
+        main_map.add_layer(Layer::Highlight);
 
         // TODO: share Layer, so that we do not need to allocate a texture
         // more than once.
         let mut mini_map = Map::new(4.0, 4.0, Point::new(vw, vh));
-        mini_map.add_layer(Box::new(TerrainLayer {
+        mini_map.add_layer(Layer::Terrain  {
             terrains: Tileset::new("assets/terrain32.png", &pattern).await.unwrap(),
             features: Tileset::new("assets/features32.png", &pattern).await.unwrap(),
-        }));
+        });
         
         let material_vignette = load_material(
             CRT_VERTEX_SHADER,
@@ -469,6 +464,7 @@ impl MainState {
                 Action::Move {actor_id, pos} => {
                     if let Some(player) = world.actors.get_mut(&actor_id) {
                         player.pos = pos;
+                        world.update_fov(&actor_id);
                     }
                     // TODO: update map
                 },
@@ -480,7 +476,8 @@ impl MainState {
                             &self.border_size,
                             &player.pos,
                             mode
-                        )
+                        );
+                        world.update_fov(&actor_id);
                     }
                 },
                 Action::PickUp { actor_id, items } => {
@@ -584,7 +581,10 @@ impl MainState {
         clear_background(BLACK);
 
         // --- main map drawing --
-        self.main_map.render_to_target(&world, &self.viewport.top_left());
+        if let Some(player) = world.actors.get(&world.player_id()) {
+            let filter = |p: Point| player.fov.contains(&p);
+            self.main_map.render_to_target(&world, &self.viewport.top_left(), &filter);
+        }
         
         // select material for map depending on input mode
         match self.input_mode {
@@ -611,7 +611,8 @@ impl MainState {
         );
         
         // draw mini map
-        self.mini_map.render_to_target(&world, &self.viewport.top_left());
+        let filter = |_p| true;
+        self.mini_map.render_to_target(&world, &self.viewport.top_left(), &filter);
 
         let texture = self.mini_map.texture();
         let map_pos = self.main_map_pos + vec2(
@@ -715,7 +716,8 @@ async fn main() {
     // the World contains the actual game data
     let mut world = World::new();
     demo_game::populate_world(&mut world);
-
+    world.update_fov(&world.player_id());
+    
     // main loop
     let mut actions: Vec<Action> = vec!();
 

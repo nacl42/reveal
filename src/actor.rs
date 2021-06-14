@@ -1,13 +1,17 @@
-use crate::point::Point;
-use crate::item::ItemId;
-use crate::idmap::{Id, IdMap};
+use crate::{
+    point::{Point, PointSet},
+    item::ItemId,
+    idmap::{Id, IdMap},
+};
 
 #[derive(Debug, Clone)]
 pub struct Actor {
     pub kind: ActorKind,
     pub pos: Point,
     pub ai: Option<ActorAI>,
-    pub inventory: Inventory
+    pub inventory: Inventory,
+    pub visited: PointSet,
+    pub fov: PointSet
 }
 
 pub type ActorId = Id<Actor>;
@@ -39,7 +43,9 @@ impl Actor {
             kind,
             pos: pos.into(),
             ai: None,
-            inventory: Vec::new()
+            inventory: Vec::new(),
+            visited: PointSet::new(),
+            fov: PointSet::new()
         }
     }
 }

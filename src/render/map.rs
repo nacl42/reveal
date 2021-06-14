@@ -3,7 +3,7 @@ use crate::{
     item::item_index,
     world::{World, HighlightMode},
     point::{Point, Rectangle},
-    actor::actor_index,
+    actor::{actor_index, ActorId},
     terrain::{terrain_index, feature_index}
 };
 
@@ -16,8 +16,9 @@ pub struct Map {
     tile_size: Vec2,
     tile_sep: Vec2,
     map_size: Point,
-    layers: Vec<Box<dyn MapLayer>>
+    layers: Vec<Layer>,
 }
+
 
 
 impl Map {
@@ -51,7 +52,7 @@ impl Map {
         }
     }
     
-    pub fn add_layer(&mut self, layer: Box<dyn MapLayer>) {
+    pub fn add_layer(&mut self, layer: Layer) {
         self.layers.push(layer);
     }
     
@@ -61,7 +62,9 @@ impl Map {
 
     /// Render world onto Map target texture.
     /// As a side-effect, the camera is set to default.
-    pub fn render_to_target(&mut self, world: &World, top_left: &Point) {
+    pub fn render_to_target<'a, F>(&'a mut self, world: &World, top_left: &Point, filter: &'a F)
+    where F: Fn(Point) -> bool
+    {
         // resize target if necessary
         let target_size = self.target_size();
         if (self.target.texture.width () != target_size.x) ||
@@ -86,7 +89,7 @@ impl Map {
         );
         
         for layer in &self.layers {
-            layer.render(&world, &viewport, &self.tile_size, &self.tile_sep);
+            layer.render(&world, &viewport, &self.tile_size, &self.tile_sep, &filter);
         }
         
         // reset camera
@@ -104,114 +107,102 @@ impl Map {
 
 }
 
-/// A Map consists of multiple MapLayer objects.  Each MapLayer is
+
+#[derive(Debug)]
+pub enum Layer {
+    Terrain { terrains: Tileset, features: Tileset },
+    Actor { tileset: Tileset },
+    Item { tileset: Tileset },
+    Highlight,
+}
+
+/// A Map consists of multiple Layer objects.  Each Layer is
 /// rendered using the `render` method, which by default calls
 /// `render_tile` for each and every tile.  Therefore, it is only
 /// necessary to implement `render_tile`. For more complex rendering
 /// tasks, you can override the `render` method itself.
-pub trait MapLayer {
-    fn render(&self, world: &World, viewport: &Rectangle,
-              tile_size: &Vec2, tile_sep: &Vec2)
+impl Layer {
+
+    fn render<'a, F>(&'a self, world: &World, viewport: &Rectangle,
+                     tile_size: &Vec2, tile_sep: &Vec2, filter: &F)
+        where F: Fn(Point) -> bool
     {
-        let mut screen = Vec2::new(0.0, 0.0);
-        for y in viewport.y1..viewport.y2 {
-            screen.x = 0.0;
-            for x in viewport.x1..viewport.x2 {
-                let tile = Point::from((x, y));
-                self.render_tile(&world, &tile, &screen, &tile_size);
-                screen.x += tile_size.x + tile_sep.x;
-            }
-            screen.y += tile_size.y + tile_sep.y;
-        }
-    }
-
-    fn render_tile(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2);
-}
-
-
-pub struct TerrainLayer {
-    pub terrains: Tileset,
-    pub features: Tileset
-}
-
-pub struct ActorLayer {
-    pub tileset: Tileset
-}
-
-pub struct ItemLayer {
-    pub tileset: Tileset
-}
-
-impl MapLayer for TerrainLayer {
-    #[inline]
-    fn render_tile(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
-        if let Some(terrain) = world.terrain.get(&world_pos) {
-            // draw terrain base tile
-            let index = terrain_index(&terrain);
-            self.terrains.render(index, *screen_pos, *tile_size);
-
-            // draw terrain features
-            if let Some(index) = feature_index(&terrain) {
-                self.features.render(index, *screen_pos, *tile_size);
-            }            
-        }
-    }    
-}
-
-
-impl MapLayer for ActorLayer {
-    #[inline]
-    fn render_tile(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
-        for (_, actor) in world.actors.iter()
-            .filter(|(_, actor)| actor.pos == *world_pos) {
-                let index = actor_index(&actor);
-                self.tileset.render(index, *screen_pos, *tile_size);
-            }
-    }
-}
-
-
-impl MapLayer for ItemLayer {
-    #[inline]
-    fn render_tile(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
-        for item_id in world.item_ids_at(&world_pos) {
-            if let Some(item) = world.items.get(&item_id) {
-                let index = item_index(&item);
-                self.tileset.render(index, *screen_pos, *tile_size);
-            }
-        }
-    }
-}
-
-
-pub struct HighlightLayer();
-
-impl MapLayer for HighlightLayer {
-    fn render(&self, world: &World, viewport: &Rectangle,
-              tile_size: &Vec2, tile_sep: &Vec2)
-    {
-        match world.highlight_mode {
-            Some(HighlightMode::FOV) => {
+        match self {
+            Layer::Highlight => {
+                match world.highlight_mode {
+                    Some(HighlightMode::FOV) => {
+                        let mut screen = Vec2::new(0.0, 0.0);
+                        for y in viewport.y1..viewport.y2 {
+                            screen.x = 0.0;
+                            for x in viewport.x1..viewport.x2 {
+                                let tile = Point::from((x, y));
+                                self.render_tile(&world, &tile, &screen, &tile_size);
+                                screen.x += tile_size.x + tile_sep.x;
+                            }
+                            screen.y += tile_size.y + tile_sep.y;
+                        }
+                    },
+                    _ => {}
+                };
+            },
+            _ => {
                 let mut screen = Vec2::new(0.0, 0.0);
                 for y in viewport.y1..viewport.y2 {
                     screen.x = 0.0;
                     for x in viewport.x1..viewport.x2 {
                         let tile = Point::from((x, y));
-                        self.render_tile(&world, &tile, &screen, &tile_size);
+                        if filter(tile.clone()) {
+                            self.render_tile(&world, &tile, &screen, &tile_size);
+                        }
                         screen.x += tile_size.x + tile_sep.x;
                     }
                     screen.y += tile_size.y + tile_sep.y;
                 }
-            },
-            _ => {}
+                
+            }
         }
     }
-    
 
     #[inline]
     fn render_tile(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
-        if world.highlights.contains(&world_pos) {
-            draw_rectangle_lines(screen_pos.x, screen_pos.y, tile_size.x, tile_size.y, 4.0, RED);
+        match self {
+            Layer::Terrain { terrains, features } => {
+                if let Some(terrain) = world.terrain.get(&world_pos) {
+                    // draw terrain base tile
+                    let index = terrain_index(&terrain);
+                    terrains.render(index, *screen_pos, *tile_size);
+                    
+                    // draw terrain features
+                    if let Some(index) = feature_index(&terrain) {
+                        features.render(index, *screen_pos, *tile_size);
+                    }            
+                }
+            },
+            Layer::Actor { tileset } => {
+                for (_, actor) in world.actors.iter()
+                    .filter(|(_, actor)| actor.pos == *world_pos) {
+                        let index = actor_index(&actor);
+                        tileset.render(index, *screen_pos, *tile_size);
+                    }
+            },
+            Layer::Item { tileset } => {
+                for item_id in world.item_ids_at(&world_pos) {
+                    if let Some(item) = world.items.get(&item_id) {
+                        let index = item_index(&item);
+                        tileset.render(index, *screen_pos, *tile_size);
+                    }
+                }
+            },
+            Layer::Highlight => {
+                if world.highlights.contains(&world_pos) {
+                    draw_rectangle_lines(screen_pos.x, screen_pos.y, tile_size.x, tile_size.y, 4.0, RED);
+                }                
+            }
         }
-    }
+    }    
 }
+
+
+
+
+

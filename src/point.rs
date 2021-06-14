@@ -2,12 +2,11 @@
 //!
 //! Point = (x, y)
 //! Rectangle = (x, y, w, h)
-//! PointMap = {(x, y)}   // TODO!
+//! PointSet = {(x, y)}
 //!
 //! All variables `x`, `y`, `w` and `h` are i32.
 //!
 
-// TODO: PointMap
 // TODO: impl Iterator for Point
 // TODO: Rectangle.left(), top(), bottom(), right()
 // TODO: TraitContains
