@@ -212,28 +212,28 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
         println!("switching to use item mode");
 
         let inventory = world.actors.get(&world.player_id()).unwrap().inventory.clone();
-        let pattern = &Pattern::MatrixWithGaps {
-            rows: 1, cols: inventory.len() as u16,
-            width: 48.0, height: 48.0,
-            sep_x: 2.0, sep_y: 2.0
-        };
-        let mut widget = InventoryWidget::new(vec2(0.0, 0.0), &pattern, false, state.params_slots.clone());
+        if inventory.len() > 0 {
+            let pattern = &Pattern::MatrixWithGaps {
+                rows: 1, cols: inventory.len() as u16,
+                width: 48.0, height: 48.0,
+                sep_x: 2.0, sep_y: 2.0
+            };
+            let mut widget = InventoryWidget::new(vec2(0.0, 0.0), &pattern, false, state.params_slots.clone());
 
-        let pos = world.player_pos();
-        let map_pos = pos - state.viewport.top_left();
-        if let Some(screen_pos) = state.main_map.tile_to_screen(&map_pos) {
-            // TODO: adding the base here is a mess and will eventually
-            // lead to an error. We should consider putting the offset
-            // somewhere, where it is automatically used.
-            let screen_pos = screen_pos + state.main_map_pos;
-            // offset a little (height of a single inventory item),
-            // so that the inventory is above the main player
-            let screen_pos = screen_pos - vec2(0.0, 48.0);
-            widget.set_pos(&screen_pos);
+            let pos = world.player_pos();
+            let map_pos = pos - state.viewport.top_left();
+            if let Some(screen_pos) = state.main_map.tile_to_screen(&map_pos) {
+                // TODO: adding the base here is a mess and will eventually
+                // lead to an error. We should consider putting the offset
+                // somewhere, where it is automatically used.
+                let screen_pos = screen_pos + state.main_map_pos;
+                // offset a little (height of a single inventory item),
+                // so that the inventory is above the main player
+                let screen_pos = screen_pos - vec2(0.0, 48.0);
+                widget.set_pos(&screen_pos);
 
-            actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::UseItem { inventory, widget, hover: None } )));
-        } else {
-            println!("error: ") // TODO
+                actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::UseItem { inventory, widget, hover: None } )));
+            }
         }
     }
 
@@ -242,26 +242,36 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
         println!("switching to drop item mode");
 
         let inventory = world.actors.get(&world.player_id()).unwrap().inventory.clone();
-        let pattern = &Pattern::MatrixWithGaps {
-            rows: 1, cols: inventory.len() as u16,
-            width: 48.0, height: 48.0,
-            sep_x: 2.0, sep_y: 2.0
-        };
-        let mut widget = InventoryWidget::new(vec2(0.0, 0.0), &pattern, false, state.params_slots.clone());
+        if inventory.len() > 0 {
+            let pattern = &Pattern::MatrixWithGaps {
+                rows: 1, cols: inventory.len() as u16,
+                width: 48.0, height: 48.0,
+                sep_x: 2.0, sep_y: 2.0
+            };
+            let mut widget = InventoryWidget::new(vec2(0.0, 0.0), &pattern, false, state.params_slots.clone());
+            
+            let pos = world.player_pos();
+            let map_pos = pos - state.viewport.top_left();
+            if let Some(screen_pos) = state.main_map.tile_to_screen(&map_pos) {
+                // TODO: adding the base here is a mess and will eventually
+                // lead to an error. We should consider putting the offset
+                // somewhere, where it is automatically used.
+                let screen_pos = screen_pos + state.main_map_pos;
+                // offset a little (height of a single inventory item),
+                // so that the inventory is above the main player
+                let screen_pos = screen_pos - vec2(0.0, 48.0);
+                widget.set_pos(&screen_pos);
 
-        let pos = world.player_pos();
-        let map_pos = pos - state.viewport.top_left();
-        if let Some(screen_pos) = state.main_map.tile_to_screen(&map_pos) {
-            // TODO: adding the base here is a mess and will eventually
-            // lead to an error. We should consider putting the offset
-            // somewhere, where it is automatically used.
-            let screen_pos = screen_pos + state.main_map_pos;
-            // offset a little (height of a single inventory item),
-            // so that the inventory is above the main player
-            let screen_pos = screen_pos - vec2(0.0, 48.0);
-            widget.set_pos(&screen_pos);
-
-            actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::DropItem { inventory, widget, hover: None } )));
+                actions.push(
+                    Action::GUI(
+                        GuiAction::SwitchMode(
+                            InputMode::DropItem {
+                                inventory, widget, hover: None
+                            }
+                        )
+                    )
+                );
+            }
         } else {
             println!("error: ") // TODO
         }
@@ -303,9 +313,6 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
                             GuiAction::SwitchMode(
                                 InputMode::PickUpItem { inventory, widget, hover: None }
                             )));
-                    } else {
-                        // TODO: proper error
-                        println!("error: cannot render inventory as actor is not visible on screen");
                     }
                 }
             }
