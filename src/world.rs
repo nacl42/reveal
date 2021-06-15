@@ -131,36 +131,92 @@ impl World {
         if let Some(actor) = self.actors.get_mut(actor_id) {
             actor.fov.clear();
             actor.fov.insert(actor.pos);
-            
+
+            actor.fov.insert(actor.pos.offset(-4, -3));
+            actor.fov.insert(actor.pos.offset(-4, -2));
+            actor.fov.insert(actor.pos.offset(-4, -1));
+            actor.fov.insert(actor.pos.offset(-4, 0));
+            actor.fov.insert(actor.pos.offset(-4, 1));
+            actor.fov.insert(actor.pos.offset(-4, 2));
+            actor.fov.insert(actor.pos.offset(-4, 3));
+
+            actor.fov.insert(actor.pos.offset(-3, -4));
+            actor.fov.insert(actor.pos.offset(-3, -3));
+            actor.fov.insert(actor.pos.offset(-3, -2));
+            actor.fov.insert(actor.pos.offset(-3, -1));
+            actor.fov.insert(actor.pos.offset(-3, 0));
+            actor.fov.insert(actor.pos.offset(-3, 1));
+            actor.fov.insert(actor.pos.offset(-3, 2));
+            actor.fov.insert(actor.pos.offset(-3, 3));
+            actor.fov.insert(actor.pos.offset(-3, 4));
+
+            actor.fov.insert(actor.pos.offset(-2, -4));
+            actor.fov.insert(actor.pos.offset(-2, -3));
             actor.fov.insert(actor.pos.offset(-2, -2));
             actor.fov.insert(actor.pos.offset(-2, -1));
             actor.fov.insert(actor.pos.offset(-2, 0));
             actor.fov.insert(actor.pos.offset(-2, 1));
             actor.fov.insert(actor.pos.offset(-2, 2));
+            actor.fov.insert(actor.pos.offset(-2, 3));
+            actor.fov.insert(actor.pos.offset(-2, 4));
 
+            actor.fov.insert(actor.pos.offset(-1, -4));
+            actor.fov.insert(actor.pos.offset(-1, -3));
             actor.fov.insert(actor.pos.offset(-1, -2));
             actor.fov.insert(actor.pos.offset(-1, -1));
             actor.fov.insert(actor.pos.offset(-1, 0));
             actor.fov.insert(actor.pos.offset(-1, 1));
             actor.fov.insert(actor.pos.offset(-1, 2));
+            actor.fov.insert(actor.pos.offset(-1, 3));
+            actor.fov.insert(actor.pos.offset(-1, 4));
 
+            actor.fov.insert(actor.pos.offset(0, -4));
+            actor.fov.insert(actor.pos.offset(0, -3));
             actor.fov.insert(actor.pos.offset(0, -2));
             actor.fov.insert(actor.pos.offset(0, -1));
             actor.fov.insert(actor.pos.offset(0, 0));
             actor.fov.insert(actor.pos.offset(0, 1));
             actor.fov.insert(actor.pos.offset(0, 2));
+            actor.fov.insert(actor.pos.offset(0, 3));
+            actor.fov.insert(actor.pos.offset(0, 4));
 
+            actor.fov.insert(actor.pos.offset(1, -4));
+            actor.fov.insert(actor.pos.offset(1, -3));
             actor.fov.insert(actor.pos.offset(1, -2));
             actor.fov.insert(actor.pos.offset(1, -1));
             actor.fov.insert(actor.pos.offset(1, 0));
             actor.fov.insert(actor.pos.offset(1, 1));
             actor.fov.insert(actor.pos.offset(1, 2));
+            actor.fov.insert(actor.pos.offset(1, 3));
+            actor.fov.insert(actor.pos.offset(1, 4));            
 
+            actor.fov.insert(actor.pos.offset(2, -4));
+            actor.fov.insert(actor.pos.offset(2, -3));
             actor.fov.insert(actor.pos.offset(2, -2));
             actor.fov.insert(actor.pos.offset(2, -1));
             actor.fov.insert(actor.pos.offset(2, 0));
             actor.fov.insert(actor.pos.offset(2, 1));
             actor.fov.insert(actor.pos.offset(2, 2));
+            actor.fov.insert(actor.pos.offset(2, 3));
+            actor.fov.insert(actor.pos.offset(2, 4));
+
+            actor.fov.insert(actor.pos.offset(3, -4));
+            actor.fov.insert(actor.pos.offset(3, -3));
+            actor.fov.insert(actor.pos.offset(3, -2));
+            actor.fov.insert(actor.pos.offset(3, -1));
+            actor.fov.insert(actor.pos.offset(3, 0));
+            actor.fov.insert(actor.pos.offset(3, 1));
+            actor.fov.insert(actor.pos.offset(3, 2));
+            actor.fov.insert(actor.pos.offset(3, 3));
+            actor.fov.insert(actor.pos.offset(3, 4));
+
+            actor.fov.insert(actor.pos.offset(4, -3));
+            actor.fov.insert(actor.pos.offset(4, -2));
+            actor.fov.insert(actor.pos.offset(4, -1));
+            actor.fov.insert(actor.pos.offset(4, 0));
+            actor.fov.insert(actor.pos.offset(4, 1));
+            actor.fov.insert(actor.pos.offset(4, 2));
+            actor.fov.insert(actor.pos.offset(4, 3));
 
         }
     }
