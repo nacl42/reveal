@@ -129,13 +129,19 @@ impl World {
 
     pub fn update_fov(&mut self, actor_id: &ActorId) {
         if let Some(actor) = self.actors.get_mut(actor_id) {
+            // update field of view
+            // TODO: move fov into world.rs
             actor.fov.clear();
             let radius = 6;
             let rect = Rectangle::from(
                 (-1*radius, -1*radius, 2*radius, 2*radius)
             );
+            // TODO: rect.offset(p)
             for p in rect.iter() {
                 actor.fov.insert(actor.pos + p);
+
+                // add visible tiles to visited positions as well
+                actor.visited.insert(actor.pos + p);
             }
         }
     }
@@ -242,4 +248,9 @@ pub enum HighlightMode {
 }
 
 
-
+#[derive(Debug)]
+pub enum RenderMode {
+    Hidden,
+    Visible,
+    Visited
+}

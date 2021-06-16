@@ -24,15 +24,17 @@ impl Tileset {
     }
 
     #[inline]
-    pub fn render(&self, index: usize, at: Vec2, dest_size: Vec2) {
+    pub fn render(&self, index: usize, at: Vec2, dest_size: Vec2, color: Color) {
         if let Some(&source) = self.sources.get(index) {
-            draw_texture_ex(self.texture, at.x, at.y, WHITE,
-                            DrawTextureParams {
-                                dest_size: Some(dest_size),
-                                source: Some(source),
-                                ..Default::default()
-                            }
+            draw_texture_ex(
+                self.texture, at.x, at.y, color,
+                DrawTextureParams {
+                    dest_size: Some(dest_size),
+                    source: Some(source),
+                    ..Default::default()
+                }
             );
         };
+
     }
 }

@@ -52,7 +52,7 @@ impl InventoryWidget {
                 if let Some(item) = world.items.get(item_id) {
                     let index = item_index(&item);
                     tileset.render(
-                        index, vec2(rect.x, rect.y), vec2(rect.w, rect.h)
+                        index, vec2(rect.x, rect.y), vec2(rect.w, rect.h), WHITE
                     );
                 }
                 

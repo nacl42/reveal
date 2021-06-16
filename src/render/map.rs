@@ -1,7 +1,7 @@
 
 use crate::{
     item::item_index,
-    world::{World, HighlightMode},
+    world::{World, HighlightMode, RenderMode},
     point::{Point, Rectangle},
     actor::{actor_index, ActorId},
     terrain::{terrain_index, feature_index}
@@ -10,6 +10,8 @@ use crate::{
 use super::{Tileset};
 
 use macroquad::prelude::*;
+
+const COLOR_VISITED: Color = Color::new(0.8, 0.8, 0.8, 1.0);
 
 pub struct Map {
     target: RenderTarget,
@@ -63,7 +65,7 @@ impl Map {
     /// Render world onto Map target texture.
     /// As a side-effect, the camera is set to default.
     pub fn render_to_target<'a, F>(&'a mut self, world: &World, top_left: &Point, filter: &'a F)
-    where F: Fn(Point) -> bool
+    where F: Fn(Point) -> RenderMode
     {
         // resize target if necessary
         let target_size = self.target_size();
@@ -125,7 +127,7 @@ impl Layer {
 
     fn render<'a, F>(&'a self, world: &World, viewport: &Rectangle,
                      tile_size: &Vec2, tile_sep: &Vec2, filter: &F)
-        where F: Fn(Point) -> bool
+        where F: Fn(Point) -> RenderMode
     {
         match self {
             Layer::Highlight => {
@@ -136,7 +138,7 @@ impl Layer {
                             screen.x = 0.0;
                             for x in viewport.x1..viewport.x2 {
                                 let tile = Point::from((x, y));
-                                self.render_tile(&world, &tile, &screen, &tile_size);
+                                self.render_tile(&world, &tile, &screen, &tile_size, RenderMode::Visible);
                                 screen.x += tile_size.x + tile_sep.x;
                             }
                             screen.y += tile_size.y + tile_sep.y;
@@ -151,9 +153,8 @@ impl Layer {
                     screen.x = 0.0;
                     for x in viewport.x1..viewport.x2 {
                         let tile = Point::from((x, y));
-                        if filter(tile.clone()) {
-                            self.render_tile(&world, &tile, &screen, &tile_size);
-                        }
+                        let mode = filter(tile.clone());
+                        self.render_tile(&world, &tile, &screen, &tile_size, mode);
                         screen.x += tile_size.x + tile_sep.x;
                     }
                     screen.y += tile_size.y + tile_sep.y;
@@ -164,40 +165,55 @@ impl Layer {
     }
 
     #[inline]
-    fn render_tile(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2) {
-        match self {
-            Layer::Terrain { terrains, features } => {
+    fn render_tile(&self, world: &World, world_pos: &Point, screen_pos: &Vec2, tile_size: &Vec2, mode: RenderMode) {
+
+        match (mode, self) {
+            (RenderMode::Hidden, _) => {},
+            (RenderMode::Visible, Layer::Terrain { terrains, features }) => {
                 if let Some(terrain) = world.terrain.get(&world_pos) {
                     // draw terrain base tile
                     let index = terrain_index(&terrain);
-                    terrains.render(index, *screen_pos, *tile_size);
+                    terrains.render(index, *screen_pos, *tile_size, WHITE);
                     
                     // draw terrain features
                     if let Some(index) = feature_index(&terrain) {
-                        features.render(index, *screen_pos, *tile_size);
+                        features.render(index, *screen_pos, *tile_size, WHITE);
                     }            
                 }
             },
-            Layer::Actor { tileset } => {
+            (RenderMode::Visited, Layer::Terrain { terrains, features }) => {
+                if let Some(terrain) = world.terrain.get(&world_pos) {
+                    // draw terrain base tile
+                    let index = terrain_index(&terrain);
+                    terrains.render(index, *screen_pos, *tile_size, COLOR_VISITED);
+                    
+                    // draw terrain features
+                    if let Some(index) = feature_index(&terrain) {
+                        features.render(index, *screen_pos, *tile_size, COLOR_VISITED);
+                    }            
+                }                
+            },
+            (RenderMode::Visible, Layer::Actor { tileset }) => {
                 for (_, actor) in world.actors.iter()
                     .filter(|(_, actor)| actor.pos == *world_pos) {
                         let index = actor_index(&actor);
-                        tileset.render(index, *screen_pos, *tile_size);
+                        tileset.render(index, *screen_pos, *tile_size, WHITE);
                     }
             },
-            Layer::Item { tileset } => {
+            (RenderMode::Visible, Layer::Item { tileset }) => {
                 for item_id in world.item_ids_at(&world_pos) {
                     if let Some(item) = world.items.get(&item_id) {
                         let index = item_index(&item);
-                        tileset.render(index, *screen_pos, *tile_size);
+                        tileset.render(index, *screen_pos, *tile_size, WHITE);
                     }
                 }
             },
-            Layer::Highlight => {
+            (_, Layer::Highlight) => {
                 if world.highlights.contains(&world_pos) {
                     draw_rectangle_lines(screen_pos.x, screen_pos.y, tile_size.x, tile_size.y, 4.0, RED);
-                }                
-            }
+                }
+            },
+            _ => {}
         }
     }    
 }
