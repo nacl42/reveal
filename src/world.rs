@@ -7,6 +7,7 @@ use crate::{
     action::Action
 };
 
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct World {
@@ -18,7 +19,8 @@ pub struct World {
     player_id: ActorId,
     pub time: i32,
     pub highlight_mode: Option<HighlightMode>,
-    pub highlights: PointSet,        
+    pub highlights: PointSet,
+    pub fov: HashMap<ActorId, PointSet>    
 }
 
 impl World {
@@ -34,8 +36,8 @@ impl World {
             player_id,
             time: 0,
             highlight_mode: None,
-            highlights: PointSet::new()
-            //tiles: TileMap::new(),
+            highlights: PointSet::new(),
+            fov: HashMap::new()
         }
     }
     
@@ -129,20 +131,18 @@ impl World {
 
     pub fn update_fov(&mut self, actor_id: &ActorId) {
         if let Some(actor) = self.actors.get_mut(actor_id) {
-            // update field of view
-            // TODO: move fov into world.rs
-            actor.fov.clear();
+            let mut fov = PointSet::new();
             let radius = 6;
-            let rect = Rectangle::from(
-                (-1*radius, -1*radius, 2*radius, 2*radius)
-            );
+            let rect = Rectangle::from((-1*radius, -1*radius, 2*radius, 2*radius));
             // TODO: rect.offset(p)
             for p in rect.iter() {
-                actor.fov.insert(actor.pos + p);
-
+                let pos = actor.pos + p;
+                fov.insert(pos);
                 // add visible tiles to visited positions as well
-                actor.visited.insert(actor.pos + p);
+                actor.visited.insert(pos);
             }
+
+            self.fov.insert(actor_id.clone(), fov);
         }
     }
 }

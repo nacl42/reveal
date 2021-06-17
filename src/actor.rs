@@ -11,7 +11,6 @@ pub struct Actor {
     pub ai: Option<ActorAI>,
     pub inventory: Inventory,
     pub visited: PointSet,
-    pub fov: PointSet
 }
 
 pub type ActorId = Id<Actor>;
@@ -45,7 +44,6 @@ impl Actor {
             ai: None,
             inventory: Vec::new(),
             visited: PointSet::new(),
-            fov: PointSet::new()
         }
     }
 }

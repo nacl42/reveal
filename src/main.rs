@@ -589,16 +589,18 @@ impl MainState {
 
         // --- main map drawing --
         if let Some(player) = world.actors.get(&world.player_id()) {
-            let filter = |p: Point| {
-                if player.fov.contains(&p) {
-                    return RenderMode::Visible;
-                } else if player.visited.contains(&p) {
-                    return RenderMode::Visited;
-                } else {
-                    return RenderMode::Hidden;
-                }
-            };
-            self.main_map.render_to_target(&world, &self.viewport.top_left(), &filter);
+            if let Some(fov) = world.fov.get(&world.player_id()) {
+                let filter = |p: Point| {
+                    if fov.contains(&p) {
+                        return RenderMode::Visible;
+                    } else if player.visited.contains(&p) {
+                        return RenderMode::Visited;
+                    } else {
+                        return RenderMode::Hidden;
+                    }
+                };
+                self.main_map.render_to_target(&world, &self.viewport.top_left(), &filter);
+            }
         }
         
         // select material for map depending on input mode
