@@ -145,6 +145,13 @@ impl World {
             self.fov.insert(actor_id.clone(), fov);
         }
     }
+
+    pub fn move_all_npc(&mut self) {
+        for (id, actor) in self.actors.iter_mut()
+            .filter(|(_, actor)| actor.is_npc()) {
+            
+        }
+    }
 }
 
 

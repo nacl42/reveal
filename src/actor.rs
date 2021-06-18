@@ -46,6 +46,13 @@ impl Actor {
             visited: PointSet::new(),
         }
     }
+
+    pub fn is_npc(&self) -> bool {
+        match self.kind {
+            ActorKind::Player => false,
+            _ => true
+        }
+    }
 }
 
 

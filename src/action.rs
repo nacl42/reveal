@@ -12,6 +12,7 @@ pub enum Action {
     PickUp { actor_id: ActorId, items: Vec<ItemId> },
     UseItem { item_id: ItemId, target: ActorId },
     DropItem { item_id: ItemId },
+    RunAI { actor_id: ActorId },
     Ouch,
     EndTurn,
     Quit,

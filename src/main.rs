@@ -11,7 +11,9 @@ mod point;
 mod render;
 mod terrain;
 mod world;
+
 extern crate rand;
+use rand::Rng;
 
 use point::{Point, Rectangle};
 use world::{World, ViewportMode, adjust_viewport, HighlightMode, RenderMode};
@@ -462,7 +464,29 @@ impl MainState {
                 Action::EndTurn => {
                     self.end_of_turn = get_time();
                     world.time += 1;
-                    // TODO: move NPC
+                    // queue action for each NPC
+                    for (id, actor) in world.actors.iter_mut()
+                        .filter(|(_, actor)| actor.is_npc()) {
+                            actions.push(Action::RunAI { actor_id: id.clone() });
+                        }
+                },
+                Action::RunAI { actor_id } => {
+                    let mut rng = rand::thread_rng();
+                    if rng.gen::<f32>() > 0.3 {
+                        if let Some(npc) = world.actors.get(&actor_id) {
+                            let deltas = [(1,0), (0,1), (-1,0), (0,-1)];
+                            let newpos: Vec<Point> = deltas.iter()
+                                .map(|(x, y)| Point::from((*x as i32, *y as i32)))
+                                .map(|delta| delta + npc.pos)
+                                .filter(|newpos| !World::is_blocking(&newpos, &world.terrain, &world.actors))
+                                .collect();
+
+                            if newpos.len() > 0 {
+                                let index = rng.gen_range(0..newpos.len());
+                                actions.push(Action::Move { actor_id, pos: newpos[index] });
+                            }
+                        }
+                    }
                 },
                 Action::Ouch => {
                     self.messages.push_front("Ouch!".into());
