@@ -21,7 +21,7 @@ use world::{World, ViewportMode, adjust_viewport, HighlightMode, RenderMode};
 use action::{Action, GuiAction};
 use pattern::Pattern;
 use actor::Inventory;
-use item::ItemId;
+use item::{ItemId, ItemKind};
 use render::{Map, Tileset, Layer, InventoryWidget, egui };
 
 use std::collections::{VecDeque};
@@ -516,15 +516,26 @@ impl MainState {
                     for item_id in items {
                         // remove object position and set owner to 0
                         if let Some(item) = world.items.get_mut(&item_id) {
-                            self.messages.push_front(
-                                format!("You pick up {}.", item.description())
-                            );
-                            item.owner = Some(actor_id);
-                            item.pos = None;
-                            world.actors.get_mut(&actor_id).unwrap()
-                                .inventory.push(item_id.clone());
-                        }                    
-                    }                    
+
+                            match item.kind {
+                                // add money directly to player's stats
+                                ItemKind::Money(amount) => {
+                                    self.messages.push_front(format!("You pick up {} coins and add it to your pouch.", amount));
+                                    world.actors.get_mut(&actor_id).unwrap()
+                                        .coins += amount;
+                                    world.items.remove(&item_id);
+                                },
+                                // everything else belongs into player's inventory
+                                _ => {
+                                    self.messages.push_front(format!("You pick up {}.", item.description()));
+                                    item.owner = Some(actor_id);
+                                    item.pos = None;
+                                    world.actors.get_mut(&actor_id).unwrap()
+                                        .inventory.push(item_id.clone());
+                                }                    
+                            }
+                        }
+                    }
                 },
                 Action::UseItem { item_id, target } => {
                     world.use_item(&item_id, &target);
@@ -690,16 +701,38 @@ impl MainState {
             }
         }
 
+        // display status (GUI)
+        if let Some(player) = world.actors.get(&world.player_id()) {
+            let vsep = self.params_info.font_size as f32 * 1.1;
+            let mut pos = vec2(5.0, 5.0 + vsep);
+            let text = format!("health: {} / {}", player.health.value, player.health.max);
+            draw_text_ex(&text, pos.x, pos.y, self.params_info);
+            pos.y += vsep;
+            let text = format!("money: {}", player.coins);
+            draw_text_ex(&text, pos.x, pos.y, self.params_info);
+            pos.y += vsep;
+            let text = format!("skills:");
+            draw_text_ex(&text, pos.x, pos.y, self.params_info);
+            for skill in &player.skills {
+                pos.y += vsep;
+                let text = format!("- {}", skill.description());
+                draw_text_ex(&text, pos.x, pos.y, self.params_info);
+            }
+            
+        }
+        
         // display messages
         let mut msg_params = self.params_info.clone();
         let max_messages = 5;
-        let mut pos = vec2(20.0, 20.0);
-        let yoffset = 1.1 * msg_params.font_size as f32;
+        let vsep = 1.1 * msg_params.font_size as f32;
+        let mut pos = vec2(screen_width()/2.0, screen_height() - 10.0*vsep - 10.0);
         
         for message in self.messages.iter().take(max_messages) {
+            let dim = measure_text(&message, Some(msg_params.font), msg_params.font_size, msg_params.font_scale);
+            pos.x = (screen_width() - dim.width) / 2.0;
             draw_text_ex(&message, pos.x, pos.y, msg_params);
             msg_params.color.a *= 0.7; // blend out color
-            pos.y += yoffset;
+            pos.y += vsep;
         };
 
         match &self.input_mode {

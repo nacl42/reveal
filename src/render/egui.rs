@@ -1,7 +1,10 @@
 use macroquad::prelude::*;
 
-use crate::MainState;
-use crate::world::World;
+use crate::{
+    MainState,
+    world::World,
+    actor::Attribute
+};
 
 pub fn render_and_update_egui(state: &mut MainState, world: &World) {
 
@@ -31,10 +34,10 @@ pub fn render_and_update_egui(state: &mut MainState, world: &World) {
                         ui.label(format!("game time: {}",
                                          world.time
                         ));
-                        ui.label(format!("health: {}",
-                                         player.health));
-                        ui.label(format!("gold: {}",
-                                         player.gold));
+                        ui.label(format!("health: {} / {}",
+                                         player.health.value, player.health.max));
+                        ui.label(format!("coins: {}",
+                                         player.coins));
                         ui.label(format!("skills: {}",
                                          player.skills.iter().map(|s| s.description()).collect::<Vec<String>>().join(",")));
                         

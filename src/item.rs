@@ -20,7 +20,7 @@ pub struct Item {
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum ItemKind {
-    Money(u32),
+    Money(u16),
     Wand,
     Ore,
     Gold,

@@ -9,8 +9,8 @@ use crate::{
 pub struct Actor {
     pub kind: ActorKind,
     pub pos: Point,
-    pub health: StatusValue,
-    pub gold: StatusValue,
+    pub health: Attribute,
+    pub coins: u16,
     pub ai: Option<ActorAI>,
     pub inventory: Inventory,
     pub visited: PointSet,
@@ -21,6 +21,30 @@ pub type ActorId = Id<Actor>;
 pub type ActorMap = IdMap<Actor>;
 
 pub type StatusValue = u16;
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Attribute {
+    pub value: u16,
+    pub max: u16
+}
+
+impl From<(u16, u16)> for Attribute {
+    fn from((value, max): (u16, u16)) -> Self {
+        Self {
+            value,
+            max
+        }
+    }
+}
+
+impl From<u16> for Attribute {
+    fn from(value: u16) -> Self {
+        Self {
+            value,
+            max: value
+        }
+    }
+}
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -41,15 +65,15 @@ pub enum ActorAI {
 pub type Inventory = Vec<ItemId>;
 
 impl Actor {
-    pub fn new<P>(kind: ActorKind, pos: P, health: StatusValue) -> Self
-    where P: Into<Point>
+    pub fn new<P, A>(kind: ActorKind, pos: P, health: A) -> Self
+    where P: Into<Point>, A: Into<Attribute>
     {
         Self {
             kind,
             pos: pos.into(),
             ai: None,
-            health,
-            gold: 0,
+            health: health.into(),
+            coins: 0,
             inventory: Vec::new(),
             visited: PointSet::new(),
             skills: Vec::new()
