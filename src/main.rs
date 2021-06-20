@@ -8,6 +8,7 @@ mod idmap;
 mod item;
 mod pattern;
 mod point;
+mod skill;
 mod render;
 mod terrain;
 mod world;

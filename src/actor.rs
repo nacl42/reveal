@@ -2,6 +2,7 @@ use crate::{
     point::{Point, PointSet},
     item::ItemId,
     idmap::{Id, IdMap},
+    skill::{Skill, SkillKind, SkillDuration}
 };
 
 #[derive(Debug, Clone)]
@@ -11,6 +12,7 @@ pub struct Actor {
     pub ai: Option<ActorAI>,
     pub inventory: Inventory,
     pub visited: PointSet,
+    pub skills: Vec<Skill>
 }
 
 pub type ActorId = Id<Actor>;
@@ -44,6 +46,7 @@ impl Actor {
             ai: None,
             inventory: Vec::new(),
             visited: PointSet::new(),
+            skills: Vec::new()
         }
     }
 
@@ -52,6 +55,11 @@ impl Actor {
             ActorKind::Player => false,
             _ => true
         }
+    }
+
+    pub fn has_skill(&self, kind: &SkillKind) -> bool {
+        self.skills.iter().
+            any(|skill| skill.kind == *kind)
     }
 }
 

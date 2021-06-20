@@ -3,7 +3,11 @@
 //!
 //!
 
-use crate::point::Point;
+use crate::{
+    point::Point,
+    skill::SkillKind
+};
+
 use std::collections::HashMap;
 use rand::Rng;
 
@@ -12,6 +16,15 @@ use rand::Rng;
 pub struct Terrain {
     pub kind: TerrainKind,
     pub feature: Option<TerrainFeature>,
+}
+
+impl Default for &Terrain {
+    fn default() -> Self {
+        &Terrain {
+            kind: TerrainKind::Empty,
+            feature: None
+        }
+    }
 }
 
 
@@ -71,6 +84,27 @@ impl Terrain {
     pub fn is_blocking(&self) -> bool {
         self.kind.is_blocking(&self)
     }
+
+    // Return access requirements for this Terrain
+    pub fn access(&self) ->  TerrainAccess {
+        match self.kind {
+            TerrainKind::ShallowWater
+                => TerrainAccess::RequireSkill(SkillKind::Swim),
+            //
+            TerrainKind::Hedge | TerrainKind::Wall |
+            TerrainKind::Water | TerrainKind::Window
+                => TerrainAccess::Blocked,
+            //
+            _
+                => TerrainAccess::Allowed
+        }
+    }
+}
+
+pub enum TerrainAccess {
+    Allowed,
+    Blocked,
+    RequireSkill(SkillKind)
 }
 
 impl From<TerrainKind> for Terrain {
@@ -114,7 +148,6 @@ impl TerrainKind {
             TerrainKind::ShallowWater => true,
             _ => false
         }
-
     }
 }
 

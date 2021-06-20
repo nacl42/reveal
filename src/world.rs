@@ -3,8 +3,9 @@ use crate::{
     point::{Point, Rectangle, PointSet},
     item::{ItemMap, ItemId, UseResult},
     actor::{Actor, ActorMap, ActorId, ActorKind},
-    terrain::{Terrain, TerrainMap, TerrainKind},
-    action::Action
+    terrain::{Terrain, TerrainMap, TerrainKind, TerrainAccess},
+    action::Action,
+    skill::SkillKind,
 };
 
 use std::collections::HashMap;
@@ -66,11 +67,15 @@ impl World {
             || World::actor_blocking(pos, actors)
     }
 
+    // Defined as function, not as method, so that we don't need
+    // to borrow the whole `World` when using this function.
     pub fn tile_blocking(pos: &Point, terrain: &TerrainMap) -> bool {
         let default_tile = Terrain::from(TerrainKind::Empty);
         terrain.get(pos).unwrap_or(&default_tile).is_blocking()
     }
 
+    // Defined as function, not as method, so that we don't need
+    // to borrow the whole `World` when using this function.
     pub fn actor_blocking(pos: &Point, actors: &ActorMap) -> bool {
         actors.iter()
             //.filter(|(_, actor)| actor.pos)
@@ -207,7 +212,15 @@ pub fn move_by(world: &World, actor_id: &ActorId, dx: i32, dy: i32, follow: bool
 {
     let actor = world.actors.get(actor_id).unwrap();
     let new_pos = actor.pos + (dx, dy).into();
-    if !World::is_blocking(&new_pos, &world.terrain, &world.actors) {
+    //if !World::is_blocking(&new_pos, &world.terrain, &world.actors) {
+    let allow_movement = match world.terrain.get(&new_pos)
+        .unwrap_or_default().access() {
+        TerrainAccess::Blocked => false,
+        TerrainAccess::Allowed => true,
+        TerrainAccess::RequireSkill(kind) => actor.has_skill(&kind)
+    };
+
+    if allow_movement {
         if follow {
             let mode = match (dx, dy) {
                 (0, -1) => ViewportMode::North,

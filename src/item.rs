@@ -1,7 +1,10 @@
-use crate::point::Point;
-use crate::actor::{ActorId};
-use crate::idmap::{Id, IdMap};
-use crate::world::World;
+use crate::{
+    point::Point,
+    actor::{ActorId},
+    idmap::{Id, IdMap},
+    world::World,
+    skill::{Skill, SkillKind, GameTime, SkillDuration},
+};
 
 pub type ItemId = Id<Item>;
 pub type ItemMap = IdMap<Item>;
@@ -30,7 +33,8 @@ pub enum ItemKind {
 #[derive(Debug, Clone)]
 pub enum Potion {
     Empty,
-    Healing
+    Healing,
+    Swimming,
 }
 
 #[allow(dead_code)]
@@ -72,6 +76,7 @@ impl Item {
             ItemKind::Money(x) => format!("{} coins of gold", x),
             ItemKind::Potion(Potion::Empty) => format!("an empty potion"),
             ItemKind::Potion(Potion::Healing) => format!("a potion of healing"),
+            ItemKind::Potion(Potion::Swimming) => format!("a potion of swimming"),
             ItemKind::Barrel => format!("a wooden barrel"),
         }
     }
@@ -87,6 +92,15 @@ impl Item {
                 println!("Not much use for an empty bottle. Away with it!");
                 UseResult::UsedUp
             },
+            ItemKind::Potion(Potion::Swimming) => {
+
+                let actor = world.actors.get_mut(target).unwrap();
+                actor.skills.push(Skill::new(SkillKind::Swim));
+                println!("You drink the potion and you feel able to swim.");                    
+                    
+                self.kind = ItemKind::Potion(Potion::Empty);
+                UseResult::Replace
+            }
             _ => UseResult::Cancel
         }
     }
@@ -104,6 +118,7 @@ pub fn item_index(item: &Item) -> usize {
         ItemKind::Money(_) => 10,
         ItemKind::Barrel => 20,
         ItemKind::Potion(Potion::Healing) => 30,
+        ItemKind::Potion(Potion::Swimming) => 30,
         ItemKind::Potion(Potion::Empty) => 31,
     }
 }
