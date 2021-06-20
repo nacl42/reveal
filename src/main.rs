@@ -613,20 +613,18 @@ impl MainState {
         clear_background(BLACK);
 
         // --- main map drawing --
-        if let Some(player) = world.actors.get(&world.player_id()) {
-            if let Some(fov) = world.fov.get(&world.player_id()) {
-                let filter = |p: Point| {
-                    if fov.contains(&p) {
-                        return RenderMode::Visible;
-                    } else if player.visited.contains(&p) {
-                        return RenderMode::Visited;
-                    } else {
-                        return RenderMode::Hidden;
-                    }
-                };
-                self.main_map.render_to_target(&world, &self.viewport.top_left(), &filter);
+        let player = world.actors.get(&world.player_id()).unwrap();
+        let fov = world.fov.get(&world.player_id()).unwrap();
+        let tile_filter = |p: Point| {
+            if fov.contains(&p) {
+                return RenderMode::Visible;
+            } else if player.visited.contains(&p) {
+                return RenderMode::Visited;
+            } else {
+                return RenderMode::Hidden;
             }
-        }
+        };
+        self.main_map.render_to_target(&world, &self.viewport.top_left(), &tile_filter);
         
         // select material for map depending on input mode
         match self.input_mode {
@@ -653,8 +651,7 @@ impl MainState {
         );
         
         // draw mini map
-        let filter = |_p| RenderMode::Visible;
-        self.mini_map.render_to_target(&world, &self.viewport.top_left(), &filter);
+        self.mini_map.render_to_target(&world, &self.viewport.top_left(), &tile_filter);
 
         let texture = self.mini_map.texture();
         let map_pos = self.main_map_pos + vec2(
