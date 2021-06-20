@@ -28,7 +28,7 @@ impl World {
 
     pub fn new() -> Self {
         let mut actors = ActorMap::new();
-        let player_id = actors.add(Actor::new(ActorKind::Player, (20, 20)));
+        let player_id = actors.add(Actor::new(ActorKind::Player, (20, 20), 8));
         
         Self {
             actors,

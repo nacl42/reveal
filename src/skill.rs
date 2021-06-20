@@ -25,6 +25,14 @@ impl Skill {
             duration: duration.into()
         }
     }
+
+    pub fn description(&self) -> String {
+        let kind = match self.kind {
+            SkillKind::Swim => "swimming",
+            SkillKind::Climb => "climbing"
+        };
+        format!("{}", kind)
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

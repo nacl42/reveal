@@ -31,6 +31,13 @@ pub fn render_and_update_egui(state: &mut MainState, world: &World) {
                         ui.label(format!("game time: {}",
                                          world.time
                         ));
+                        ui.label(format!("health: {}",
+                                         player.health));
+                        ui.label(format!("gold: {}",
+                                         player.gold));
+                        ui.label(format!("skills: {}",
+                                         player.skills.iter().map(|s| s.description()).collect::<Vec<String>>().join(",")));
+                        
                     }
                 });
         };

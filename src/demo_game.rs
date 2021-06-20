@@ -85,7 +85,8 @@ pub fn populate_world(world: &mut World) {
         let actor_pos = slots[index];
         let new_actor = Actor::new(
             ActorKind::Townsfolk,
-            actor_pos.clone()
+            actor_pos.clone(),
+            rng.gen_range(5..8)
         );
         world.actors.add(new_actor);
         slots.remove(index);
