@@ -92,6 +92,14 @@ impl Actor {
             any(|skill| skill.kind == *kind)
     }
 
+    pub fn description(&self) -> String {
+        match self.kind {
+            ActorKind::Player => format!("player"),
+            ActorKind::Cat => format!("a cat"),
+            ActorKind::Dog => format!("a dog"),
+            ActorKind::Townsfolk => format!("a villager"),
+        }
+    }
 }
 
 

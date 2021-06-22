@@ -671,9 +671,12 @@ impl MainState {
         gl_use_default_material();
 
         // display status information
-        if false {
+        if true {
             if let Some(player) = world.actors.get(&world.player_id()) {
-                let pos = vec2(20.0, screen_height() - 24.0 - 20.0);
+                let p = self.params_info.clone();
+                let margin = 10.0;
+                let mut pos = vec2(0.0, margin + p.font_size as f32);
+                
                 // names of items at spot
                 let ids = world.item_ids_at(&player.pos);
                 let names = ids.iter()
@@ -682,32 +685,46 @@ impl MainState {
                     .collect::<Vec<String>>();
                 let text = names.join(", ");
                 if text.len() > 0 {
-                    let pos = pos + Vec2::from((80.0, 0.0));
-                    draw_text_ex(&text, pos.x, pos.y, self.params_info);
+                    let dim = measure_text(&text, Some(p.font), p.font_size, p.font_scale);
+                    pos.x = screen_width() - dim.width - margin;
+                    draw_text_ex(&text, pos.x, pos.y, p);
+                    pos.y += dim.height * 1.1;
                     
                     let text = "use <p> to pick up the items";
-                    let pos = pos + Vec2::from((0.0, 30.0));
-                    draw_text_ex(&text, pos.x, pos.y, self.params_info);
+                    let dim = measure_text(&text, Some(p.font), p.font_size, p.font_scale);
+                    pos.x = screen_width() - dim.width - margin;
+                    draw_text_ex(&text, pos.x, pos.y, p);
                 }
             }
         }
 
-        // display status (GUI)
+        // display player status (GUI)
         if let Some(player) = world.actors.get(&world.player_id()) {
+            let mut params = self.params_info.clone();
             let vsep = self.params_info.font_size as f32 * 1.1;
             let mut pos = vec2(5.0, 5.0 + vsep);
+
+            let text = format!("» {} «", player.description());
+            params.color = YELLOW;
+            draw_text_ex(&text, pos.x, pos.y, params);
+            pos.y += vsep * 1.5;
+            
             let text = format!("health: {} / {}", player.health.value, player.health.max);
-            draw_text_ex(&text, pos.x, pos.y, self.params_info);
+            params.color = WHITE;
+            draw_text_ex(&text, pos.x, pos.y, params);
             pos.y += vsep;
+            
             let text = format!("money: {}", player.coins);
-            draw_text_ex(&text, pos.x, pos.y, self.params_info);
+            draw_text_ex(&text, pos.x, pos.y, params);
             pos.y += vsep;
+            
             let text = format!("skills:");
-            draw_text_ex(&text, pos.x, pos.y, self.params_info);
+            draw_text_ex(&text, pos.x, pos.y, params);
+            pos.y += vsep;
             for skill in &player.skills {
-                pos.y += vsep;
                 let text = format!("- {}", skill.description());
-                draw_text_ex(&text, pos.x, pos.y, self.params_info);
+                draw_text_ex(&text, pos.x, pos.y, params);
+                pos.y += vsep;
             }
             
         }
