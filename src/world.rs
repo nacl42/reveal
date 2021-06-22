@@ -6,6 +6,7 @@ use crate::{
     terrain::{Terrain, TerrainMap, TerrainKind, TerrainAccess},
     action::Action,
     skill::SkillKind,
+    message::{Message, MessageQueue, MessageKind}
 };
 
 use std::collections::HashMap;
@@ -21,7 +22,8 @@ pub struct World {
     pub time: i32,
     pub highlight_mode: Option<HighlightMode>,
     pub highlights: PointSet,
-    pub fov: HashMap<ActorId, PointSet>    
+    pub fov: HashMap<ActorId, PointSet>,
+    pub messages: MessageQueue
 }
 
 impl World {
@@ -38,7 +40,8 @@ impl World {
             time: 0,
             highlight_mode: None,
             highlights: PointSet::new(),
-            fov: HashMap::new()
+            fov: HashMap::new(),
+            messages: MessageQueue::default()
         }
     }
     

@@ -28,5 +28,6 @@ pub enum GuiAction {
     HideShowHelp,
     HideShowStatus,
     HideShowFOV,
+    HideShowMessages,
     SwitchMode(InputMode)
 }

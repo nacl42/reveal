@@ -63,7 +63,19 @@ pub fn render_and_update_egui(state: &mut MainState, world: &World) {
                     ui.label("q - quit");
                 });
         };
-            
+
+        if state.show_messages {
+            egui::Window::new("Messages:")
+                .default_pos([screen_width(), screen_height()])
+                .resizable(true)
+                .collapsible(true)
+                .show(egui_ctx, |ui| {
+                    for msg in world.messages.iter() {
+                        ui.label(format!("{}", msg.text));
+                    }
+                });
+        };
+        
         if state.show_inventory {
             egui::Window::new("You carry the following items:")
                 .default_pos([screen_width(), screen_height()])

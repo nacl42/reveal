@@ -6,6 +6,7 @@ mod demo_game;
 mod flake;
 mod idmap;
 mod item;
+mod message;
 mod pattern;
 mod point;
 mod skill;
@@ -16,15 +17,14 @@ mod world;
 extern crate rand;
 use rand::Rng;
 
-use point::{Point, Rectangle};
-use world::{World, ViewportMode, adjust_viewport, HighlightMode, RenderMode};
 use action::{Action, GuiAction};
-use pattern::Pattern;
 use actor::Inventory;
 use item::{ItemId, ItemKind};
+use message::{Message, MessageKind, MessageQueue};
+use pattern::Pattern;
+use point::{Point, Rectangle};
 use render::{Map, Tileset, Layer, InventoryWidget, egui };
-
-use std::collections::{VecDeque};
+use world::{World, ViewportMode, adjust_viewport, HighlightMode, RenderMode};
 
 
 const CRT_FRAGMENT_SHADER: &'static str = include_str!("shaders/vignette_fragment.glsl");
@@ -195,6 +195,11 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
         actions.push(Action::GUI(GuiAction::HideShowInventory));
     }
 
+    // M => hide/show messages
+    if is_key_pressed(KeyCode::M) {
+        actions.push(Action::GUI(GuiAction::HideShowMessages));
+    }
+
     // H => hide/show help
     if is_key_pressed(KeyCode::H) {
         actions.push(Action::GUI(GuiAction::HideShowHelp));
@@ -326,7 +331,6 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
 }
 
 
-
 pub struct MainState {
     quit: bool,
     last_input: f64,
@@ -335,9 +339,9 @@ pub struct MainState {
     show_inventory: bool,
     show_help: bool,
     show_status: bool,
+    show_messages: bool,
     viewport: Rectangle,
     border_size: Point,
-    messages: VecDeque<String>,
     egui_has_focus: bool,
     material_vignette: Material,
     material_bw: Material,
@@ -370,7 +374,7 @@ impl MainState {
 
         let params_info = TextParams {
             font,
-            font_size: 16,
+            font_size: 18,
             color: WHITE,
             ..Default::default()
         };
@@ -437,10 +441,10 @@ impl MainState {
             show_inventory: false,
             show_help: false,
             show_status: false,
+            show_messages: false,
             item_tileset,
             viewport,
             border_size: Point::from((10, 10)),
-            messages: VecDeque::new(),
             egui_has_focus: false,
             material_vignette,
             material_bw,
@@ -490,7 +494,7 @@ impl MainState {
                     }
                 },
                 Action::Ouch => {
-                    self.messages.push_front("Ouch!".into());
+                    world.messages.push(Message::new(MessageKind::Info, "Ouch!", true));
                     self.end_of_turn = get_time();
                 },
                 Action::Move {actor_id, pos} => {
@@ -520,14 +524,14 @@ impl MainState {
                             match item.kind {
                                 // add money directly to player's stats
                                 ItemKind::Money(amount) => {
-                                    self.messages.push_front(format!("You pick up {} coins and add it to your pouch.", amount));
+                                    world.messages.push((MessageKind::Inventory, format!("You pick up {} coins and add it to your pouch.", amount)));
                                     world.actors.get_mut(&actor_id).unwrap()
                                         .coins += amount;
                                     world.items.remove(&item_id);
                                 },
                                 // everything else belongs into player's inventory
                                 _ => {
-                                    self.messages.push_front(format!("You pick up {}.", item.description()));
+                                    world.messages.push((MessageKind::Inventory, format!("You pick up {}.", item.description())));
                                     item.owner = Some(actor_id);
                                     item.pos = None;
                                     world.actors.get_mut(&actor_id).unwrap()
@@ -570,6 +574,9 @@ impl MainState {
                 },
                 Action::GUI(GuiAction::TestBW) => {
                     self.is_bw = !self.is_bw;
+                },
+                Action::GUI(GuiAction::HideShowMessages) => {
+                    self.show_messages = !self.show_messages;  
                 },
                 Action::GUI(GuiAction::HideShowInventory) => {
                     self.show_inventory = !self.show_inventory;
@@ -661,43 +668,27 @@ impl MainState {
             }
         );
         
-        // draw mini map
-        self.mini_map.render_to_target(&world, &self.viewport.top_left(), &tile_filter);
-
-        let texture = self.mini_map.texture();
-        let map_pos = self.main_map_pos + vec2(
-            screen_width() - texture.width() - 10.0,
-            10.0
-        );
-        // TODO: do we copy the texture here?
-        draw_texture_ex(
-            *texture, map_pos.x, map_pos.y, WHITE,
-            DrawTextureParams {
-                flip_y: true, // this is a temporary workaround
-                dest_size: Some(self.mini_map.target_size()),
-                ..Default::default()
-            }
-        );
-
         gl_use_default_material();
 
         // display status information
-        if let Some(player) = world.actors.get(&world.player_id()) {
-            let pos = vec2(20.0, screen_height() - 24.0 - 20.0);
-            // names of items at spot
-            let ids = world.item_ids_at(&player.pos);
-            let names = ids.iter()
-                .map(|id| world.items.get(id).unwrap())
-                .map(|item| item.description())
-                .collect::<Vec<String>>();
-            let text = names.join(", ");
-            if text.len() > 0 {
-                let pos = pos + Vec2::from((80.0, 0.0));
-                draw_text_ex(&text, pos.x, pos.y, self.params_info);
-                
-                let text = "use <p> to pick up the items";
-                let pos = pos + Vec2::from((0.0, 30.0));
-                draw_text_ex(&text, pos.x, pos.y, self.params_info);
+        if false {
+            if let Some(player) = world.actors.get(&world.player_id()) {
+                let pos = vec2(20.0, screen_height() - 24.0 - 20.0);
+                // names of items at spot
+                let ids = world.item_ids_at(&player.pos);
+                let names = ids.iter()
+                    .map(|id| world.items.get(id).unwrap())
+                    .map(|item| item.description())
+                    .collect::<Vec<String>>();
+                let text = names.join(", ");
+                if text.len() > 0 {
+                    let pos = pos + Vec2::from((80.0, 0.0));
+                    draw_text_ex(&text, pos.x, pos.y, self.params_info);
+                    
+                    let text = "use <p> to pick up the items";
+                    let pos = pos + Vec2::from((0.0, 30.0));
+                    draw_text_ex(&text, pos.x, pos.y, self.params_info);
+                }
             }
         }
 
@@ -721,20 +712,47 @@ impl MainState {
             
         }
         
-        // display messages
+        // display messages (new version)
         let mut msg_params = self.params_info.clone();
         let max_messages = 5;
         let vsep = 1.1 * msg_params.font_size as f32;
-        let mut pos = vec2(screen_width()/2.0, screen_height() - 10.0*vsep - 10.0);
-        
-        for message in self.messages.iter().take(max_messages) {
-            let dim = measure_text(&message, Some(msg_params.font), msg_params.font_size, msg_params.font_scale);
-            pos.x = (screen_width() - dim.width) / 2.0;
-            draw_text_ex(&message, pos.x, pos.y, msg_params);
-            msg_params.color.a *= 0.7; // blend out color
+        let margin = 10.0;
+        let mut pos = vec2(margin, screen_height() - max_messages as f32 * vsep - margin);
+        let area_height = (max_messages+1) as f32 * vsep + 2.0*margin;
+        draw_rectangle(0.0, screen_height() - area_height, screen_width(), area_height, Color::from_rgba(64, 64, 64, 128));
+        let mut alpha = 1.0;
+        for msg in world.messages.iter().take(max_messages) {
+            msg_params.color = match msg.kind {
+                MessageKind::Info => Color::from([1.0, 1.0, 1.0, alpha]),
+                MessageKind::Debug => WHITE,
+                MessageKind::Inventory => Color::from([1.0, 1.0, 0.3, alpha]),
+                MessageKind::Skill => Color::from([0.0, 0.0, 1.0, alpha])
+            };
+            draw_text_ex(&msg.text, pos.x, pos.y, msg_params);
+            alpha *= 0.7; // blend out color
             pos.y += vsep;
-        };
+        }
 
+        // draw mini map on top of message area
+        self.mini_map.render_to_target(&world, &self.viewport.top_left(), &tile_filter);
+
+        let texture = self.mini_map.texture();
+        let map_pos = self.main_map_pos + vec2(
+            screen_width() - texture.width() - 10.0,
+            screen_height() - texture.height() - 40.0
+        );
+        draw_rectangle_lines(map_pos.x - 2.0, map_pos.y - 2.0, texture.width() + 4.0, texture.height() + 4.0, 2.0, Color::from_rgba(128, 128, 128, 228));
+        // TODO: do we copy the texture here?
+        draw_texture_ex(
+            *texture, map_pos.x, map_pos.y, WHITE,
+            DrawTextureParams {
+                flip_y: true, // this is a temporary workaround
+                dest_size: Some(self.mini_map.target_size()),
+                ..Default::default()
+            }
+        );
+
+        //
         match &self.input_mode {
             InputMode::PickUpItem { inventory, widget, hover }  => {
                 let pos = widget.top_left() - vec2(0.0, self.params_info.font_size as f32); // TODO: height of tile - extra offset
@@ -800,7 +818,7 @@ async fn main() {
         ViewportMode::Center
     );
 
-    state.messages.push_front("Welcome to the Land of Mystery...".into());
+    world.messages.push("Welcome to the Land of Mystery...");
 
     while !state.quit {
 
@@ -866,7 +884,7 @@ async fn main() {
         state.update(&mut world, &mut actions);
         state.update_fov(&mut world);
         state.render(&world);
-        state.messages.truncate(10);  // flush very old messages
+        world.messages.flush();
 
         egui_macroquad::draw();
         

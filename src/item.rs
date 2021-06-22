@@ -4,6 +4,7 @@ use crate::{
     idmap::{Id, IdMap},
     world::World,
     skill::{Skill, SkillKind, GameTime, SkillDuration},
+    message::MessageKind
 };
 
 pub type ItemId = Id<Item>;
@@ -96,8 +97,7 @@ impl Item {
 
                 let actor = world.actors.get_mut(target).unwrap();
                 actor.skills.push(Skill::new(SkillKind::Swim));
-                println!("You drink the potion and you feel able to swim.");                    
-                    
+                world.messages.push((MessageKind::Skill, "You drink the potion and you feel able to swim."));
                 self.kind = ItemKind::Potion(Potion::Empty);
                 UseResult::Replace
             }
