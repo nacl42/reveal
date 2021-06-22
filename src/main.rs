@@ -37,8 +37,8 @@ const DELTA_TURN: f64 = 0.1;
 fn window_conf() -> Conf {
     Conf {
         window_title: "Reveal".to_owned(),
-        window_width: 1024,
-        window_height: 800,
+        window_width: 1280,
+        window_height: 1000,
         //fullscreen: true,
         ..Default::default()
     }
