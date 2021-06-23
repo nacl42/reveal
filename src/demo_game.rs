@@ -43,12 +43,15 @@ pub fn populate_world(world: &mut World) {
         .with_owner(player_id);
     let swimming_potion = Item::new(ItemKind::Potion(Potion::Swimming))
         .with_owner(player_id);
+    let vision_potion = Item::new(ItemKind::Potion(Potion::Vision))
+        .with_owner(player_id);
 
     let player = world.actors.get_mut(&player_id).unwrap();
     player.inventory.push(world.items.add(magical_wand));
     player.inventory.push(world.items.add(some_money));
     player.inventory.push(world.items.add(healing_potion));
     player.inventory.push(world.items.add(swimming_potion));
+    player.inventory.push(world.items.add(vision_potion));
 
     // spawn some more items on the map (just as an example)
     world.items.add(Item::new(ItemKind::Money(10)).with_pos((5, 6)));

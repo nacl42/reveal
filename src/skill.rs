@@ -29,7 +29,8 @@ impl Skill {
     pub fn description(&self) -> String {
         let kind = match self.kind {
             SkillKind::Swim => "swimming",
-            SkillKind::Climb => "climbing"
+            SkillKind::Climb => "climbing",
+            SkillKind::Vision { radius } => "vision"
         };
         format!("{}", kind)
     }
@@ -39,6 +40,7 @@ impl Skill {
 pub enum SkillKind {
     Swim,
     Climb,
+    Vision { radius: i32 }
 }
 
 pub type GameTime = usize;

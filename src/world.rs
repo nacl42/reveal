@@ -140,7 +140,17 @@ impl World {
     pub fn update_fov(&mut self, actor_id: &ActorId) {
         if let Some(actor) = self.actors.get_mut(actor_id) {
             let mut fov = PointSet::new();
-            let radius = 6;
+
+            // add extra vision radius if available
+            let radius =
+                actor.skills.iter()
+                .fold(6,
+                      |acc, skill| if let SkillKind::Vision { radius } = skill.kind {
+                          acc + radius
+                      } else {
+                          acc
+                      }) as i32;
+            
             let rect = Rectangle::from((-1*radius, -1*radius, 2*radius, 2*radius));
             // TODO: rect.offset(p)
             for p in rect.iter() {

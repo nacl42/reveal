@@ -34,6 +34,7 @@ pub enum ItemKind {
 #[derive(Debug, Clone)]
 pub enum Potion {
     Empty,
+    Vision,
     Healing,
     Swimming,
 }
@@ -78,6 +79,7 @@ impl Item {
             ItemKind::Potion(Potion::Empty) => format!("an empty potion"),
             ItemKind::Potion(Potion::Healing) => format!("a potion of healing"),
             ItemKind::Potion(Potion::Swimming) => format!("a potion of swimming"),
+            ItemKind::Potion(Potion::Vision) => format!("a potion of vision"),
             ItemKind::Barrel => format!("a wooden barrel"),
         }
     }
@@ -85,16 +87,26 @@ impl Item {
     pub fn use_item(&mut self, world: &mut World, target: &ActorId) -> UseResult {
         match self.kind {
             ItemKind::Potion(Potion::Healing) => {
-                println!("You drink the potion and feel much better.");
+                world.messages.push((MessageKind::Skill, "You drink the potion and feel much better."));
+                if let Some(actor) = world.actors.get_mut(target) {
+                    actor.health.value += 3;
+                }
+                self.kind = ItemKind::Potion(Potion::Empty);
+                UseResult::Replace
+            },
+            ItemKind::Potion(Potion::Vision) => {
+                let actor = world.actors.get_mut(target).unwrap();
+                actor.skills.push(Skill::new(SkillKind::Vision { radius: 3 }));
+                world.messages.push((MessageKind::Skill, "You drink the potion and you see things much clearer."));
+                world.update_fov(&target);
                 self.kind = ItemKind::Potion(Potion::Empty);
                 UseResult::Replace
             },
             ItemKind::Potion(Potion::Empty) => {
-                println!("Not much use for an empty bottle. Away with it!");
+                world.messages.push("Not much use for an empty bottle. Away with it!");
                 UseResult::UsedUp
             },
             ItemKind::Potion(Potion::Swimming) => {
-
                 let actor = world.actors.get_mut(target).unwrap();
                 actor.skills.push(Skill::new(SkillKind::Swim));
                 world.messages.push((MessageKind::Skill, "You drink the potion and you feel able to swim."));
@@ -117,8 +129,9 @@ pub fn item_index(item: &Item) -> usize {
         ItemKind::Money(x) if x < 30 => 11,
         ItemKind::Money(_) => 10,
         ItemKind::Barrel => 20,
-        ItemKind::Potion(Potion::Healing) => 30,
-        ItemKind::Potion(Potion::Swimming) => 30,
-        ItemKind::Potion(Potion::Empty) => 31,
+        ItemKind::Potion(Potion::Healing) => 33,
+        ItemKind::Potion(Potion::Swimming) => 32,
+        ItemKind::Potion(Potion::Vision) => 31,
+        ItemKind::Potion(Potion::Empty) => 30,
     }
 }

@@ -755,8 +755,11 @@ impl MainState {
                 let pos = widget.top_left() - vec2(0.0, self.params_info.font_size as f32); // TODO: height of tile - extra offset
                 let label = match hover {
                     Some(hovered_id) => {
-                        let item = world.items.get(&hovered_id).unwrap();
-                        format!("pick up {}", item.description())
+                        if let Some(item) = world.items.get(&hovered_id) {
+                            format!("pick up {}", item.description())
+                        } else {
+                            format!("pick up ?")
+                        }
                     },
                     None => format!("pick up")
                 };
