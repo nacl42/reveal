@@ -11,7 +11,7 @@ pub struct Actor {
     pub pos: Point,
     pub health: Attribute,
     pub coins: u16,
-    pub ai: Option<ActorAI>,
+    pub ai: ActorAI,
     pub inventory: Inventory,
     pub visited: PointSet,
     pub skills: Vec<Skill>
@@ -53,6 +53,7 @@ pub enum ActorKind {
     Cat,
     Dog,
     Townsfolk,
+    Shopkeeper
 }
 
 #[allow(dead_code)]
@@ -71,7 +72,7 @@ impl Actor {
         Self {
             kind,
             pos: pos.into(),
-            ai: None,
+            ai: ActorAI::WanderAround,
             health: health.into(),
             coins: 0,
             inventory: Vec::new(),
@@ -80,6 +81,11 @@ impl Actor {
         }
     }
 
+    pub fn with_ai(mut self, ai: ActorAI) -> Self {
+        self.ai = ai;
+        self
+    }
+    
     pub fn is_npc(&self) -> bool {
         match self.kind {
             ActorKind::Player => false,
@@ -98,6 +104,7 @@ impl Actor {
             ActorKind::Cat => format!("a cat"),
             ActorKind::Dog => format!("a dog"),
             ActorKind::Townsfolk => format!("a villager"),
+            ActorKind::Shopkeeper => format!("a shopkeeper"),
         }
     }
 }
@@ -108,6 +115,7 @@ pub fn actor_index(actor: &Actor) -> usize {
     match actor.kind {
         ActorKind::Player => 2,
         ActorKind::Townsfolk => 3,
+        ActorKind::Shopkeeper => 0,
         _ => 1
     }
 }

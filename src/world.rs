@@ -261,7 +261,7 @@ pub fn move_by(world: &World, actor_id: &ActorId, dx: i32, dy: i32, follow: bool
         TerrainAccess::RequireSkill(kind) => actor.has_skill(&kind)
     };
 
-    if allow_movement {
+    if allow_movement && !World::actor_blocking(&new_pos, &world.actors) {
         if follow {
             let mode = match (dx, dy) {
                 (0, -1) => ViewportMode::North,

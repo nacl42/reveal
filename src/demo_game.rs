@@ -1,6 +1,6 @@
 use crate::{
     world::World,
-    actor::{Actor, ActorId, ActorKind},
+    actor::{Actor, ActorId, ActorKind, ActorAI},
     terrain::{TerrainKind, DoorState, Orientation},
     item::*,
     point::Point,
@@ -62,7 +62,14 @@ pub fn populate_world(world: &mut World) {
     world.items.add(Item::new(ItemKind::Bread).with_pos(player.pos));
     world.items.add(Item::new(ItemKind::Money(20)).with_pos(player.pos));
     world.items.add(Item::new(ItemKind::Wand).with_pos(player.pos));
+
+    // add shopkeeper next to the player, so that we can immediately go shopping
+    let pos = player.pos + Point::from((1,0));
+    let shopkeeper = Actor::new(ActorKind::Shopkeeper, pos, 4)
+        .with_ai(ActorAI::DoNothing);
     
+    world.actors.add(shopkeeper);
+
     // spawn some random NPCs
     
     // TODO: this is some sort of index which could be kept up-to-date

@@ -18,7 +18,7 @@ extern crate rand;
 use rand::Rng;
 
 use action::{Action, GuiAction};
-use actor::Inventory;
+use actor::{Inventory, ActorAI};
 use item::{ItemId, ItemKind};
 use message::{Message, MessageKind, MessageQueue};
 use pattern::Pattern;
@@ -327,6 +327,11 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
         }
     }
 
+    // T => Talk
+    if is_key_pressed(KeyCode::T) {
+        
+    }
+    
     actions
 }
 
@@ -477,18 +482,24 @@ impl MainState {
                 },
                 Action::RunAI { actor_id } => {
                     let mut rng = rand::thread_rng();
-                    if rng.gen::<f32>() > 0.3 {
-                        if let Some(npc) = world.actors.get(&actor_id) {
-                            let deltas = [(1,0), (0,1), (-1,0), (0,-1)];
-                            let newpos: Vec<Point> = deltas.iter()
-                                .map(|(x, y)| Point::from((*x as i32, *y as i32)))
-                                .map(|delta| delta + npc.pos)
-                                .filter(|newpos| !World::is_blocking(&newpos, &world.terrain, &world.actors))
-                                .collect();
+                    
+                    if let Some(npc) = world.actors.get(&actor_id) {
+                        match npc.ai {
+                            ActorAI::DoNothing => {},
+                            ActorAI::WanderAround => {
+                                if rng.gen::<f32>() > 0.3 {
+                                    let deltas = [(1,0), (0,1), (-1,0), (0,-1)];
+                                    let newpos: Vec<Point> = deltas.iter()
+                                        .map(|(x, y)| Point::from((*x as i32, *y as i32)))
+                                        .map(|delta| delta + npc.pos)
+                                        .filter(|newpos| !World::is_blocking(&newpos, &world.terrain, &world.actors))
+                                        .collect();
 
-                            if newpos.len() > 0 {
-                                let index = rng.gen_range(0..newpos.len());
-                                actions.push(Action::Move { actor_id, pos: newpos[index] });
+                                    if newpos.len() > 0 {
+                                        let index = rng.gen_range(0..newpos.len());
+                                        actions.push(Action::Move { actor_id, pos: newpos[index] });
+                                    }
+                                }
                             }
                         }
                     }
