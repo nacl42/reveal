@@ -1,7 +1,7 @@
 
 use crate::{
     point::{Point, Rectangle, PointSet},
-    item::{ItemMap, ItemId, UseResult},
+    item::{ItemMap, ItemId, UseResult, ItemKind},
     actor::{Actor, ActorMap, ActorId, ActorKind},
     terrain::{Terrain, TerrainMap, TerrainKind, TerrainAccess},
     action::Action,
@@ -157,7 +157,35 @@ impl World {
     pub fn move_all_npc(&mut self) {
         for (id, actor) in self.actors.iter_mut()
             .filter(|(_, actor)| actor.is_npc()) {
-            
+            }
+    }
+
+    pub fn pick_up(&mut self, actor_id: &ActorId, item_id: &ItemId) {
+        // remove object position and set owner to 0
+        if let Some(item) = self.items.get_mut(&item_id) {
+            match item.kind {
+                // add money directly to player's stats
+                ItemKind::Money(amount) => {
+                    self.messages.push(
+                        (MessageKind::Inventory,
+                         format!("You pick up {} coins and add it to your pouch.", amount))
+                    );
+                    self.actors.get_mut(&actor_id).unwrap()
+                        .coins += amount;
+                    self.items.remove(&item_id);
+                },
+                // everything else belongs into player's inventory
+                _ => {
+                    self.messages.push(
+                        (MessageKind::Inventory,
+                         format!("You pick up {}.", item.description()))
+                    );
+                    item.owner = Some(*actor_id);
+                    item.pos = None;
+                    self.actors.get_mut(&actor_id).unwrap()
+                        .inventory.push(item_id.clone());
+                }                    
+            }
         }
     }
 }

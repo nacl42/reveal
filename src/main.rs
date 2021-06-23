@@ -518,28 +518,8 @@ impl MainState {
                 },
                 Action::PickUp { actor_id, items } => {
                     for item_id in items {
-                        // remove object position and set owner to 0
-                        if let Some(item) = world.items.get_mut(&item_id) {
-
-                            match item.kind {
-                                // add money directly to player's stats
-                                ItemKind::Money(amount) => {
-                                    world.messages.push((MessageKind::Inventory, format!("You pick up {} coins and add it to your pouch.", amount)));
-                                    world.actors.get_mut(&actor_id).unwrap()
-                                        .coins += amount;
-                                    world.items.remove(&item_id);
-                                },
-                                // everything else belongs into player's inventory
-                                _ => {
-                                    world.messages.push((MessageKind::Inventory, format!("You pick up {}.", item.description())));
-                                    item.owner = Some(actor_id);
-                                    item.pos = None;
-                                    world.actors.get_mut(&actor_id).unwrap()
-                                        .inventory.push(item_id.clone());
-                                }                    
-                            }
-                        }
-                    }
+                        world.pick_up(&actor_id, &item_id);
+                    }  
                 },
                 Action::UseItem { item_id, target } => {
                     world.use_item(&item_id, &target);
@@ -871,8 +851,19 @@ async fn main() {
                     match read_input_from_inventory(&widget, &inventory, &world) {
                         InventorySelection::Cancel => actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default))),
                         InventorySelection::Item { item_id } => {
-                            actions.push(Action::PickUp { actor_id: world.player_id(), items: vec!(item_id) } );
-                            actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
+                            // pick up item, remove item from the inventory
+                            // and either keep the state or close the selection
+                            // if the inventory to pick is empty
+                            let actor_id = world.player_id();
+                            world.pick_up(&actor_id, &item_id);
+                            *inventory = inventory.iter()
+                                .filter(|&id| id != &item_id)
+                                .map(|id| id.clone())
+                                .collect::<Vec<ItemId>>();
+
+                            if inventory.len() == 0 {
+                                actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
+                            }
                         },
                         InventorySelection::Hover { item_id } => {
                             hover.replace(item_id);
@@ -885,8 +876,15 @@ async fn main() {
                     match read_input_from_inventory(&widget, &inventory, &world) {
                         InventorySelection::Cancel => actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default))),
                         InventorySelection::Item { item_id } => {
-                            actions.push(Action::DropItem { item_id });
-                            actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
+                            world.drop_item(&item_id);
+                            *inventory = inventory.iter()
+                                .filter(|&id| id != &item_id)
+                                .map(|id| id.clone())
+                                .collect::<Vec<ItemId>>();
+
+                            if inventory.len() == 0 {
+                                actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
+                            }
                         },
                         InventorySelection::Hover { item_id } => {
                             hover.replace(item_id);
