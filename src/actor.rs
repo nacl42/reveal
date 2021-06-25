@@ -115,7 +115,7 @@ pub fn actor_index(actor: &Actor) -> usize {
     match actor.kind {
         ActorKind::Player => 2,
         ActorKind::Townsfolk => 3,
-        ActorKind::Shopkeeper => 0,
+        ActorKind::Shopkeeper => 12,
         _ => 1
     }
 }

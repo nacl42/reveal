@@ -129,9 +129,9 @@ pub fn item_index(item: &Item) -> usize {
         ItemKind::Money(x) if x < 30 => 11,
         ItemKind::Money(_) => 10,
         ItemKind::Barrel => 20,
-        ItemKind::Potion(Potion::Healing) => 33,
-        ItemKind::Potion(Potion::Swimming) => 32,
-        ItemKind::Potion(Potion::Vision) => 31,
-        ItemKind::Potion(Potion::Empty) => 30,
+        ItemKind::Potion(Potion::Healing) => 71,
+        ItemKind::Potion(Potion::Swimming) => 72,
+        ItemKind::Potion(Potion::Vision) => 73,
+        ItemKind::Potion(Potion::Empty) => 75,
     }
 }
