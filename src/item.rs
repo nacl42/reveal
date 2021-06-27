@@ -27,7 +27,8 @@ pub enum ItemKind {
     Gold,
     Potion(Potion),
     Bread,
-    Barrel
+    Barrel,
+    Key
 }
 
 #[allow(dead_code)]
@@ -81,6 +82,7 @@ impl Item {
             ItemKind::Potion(Potion::Swimming) => format!("a potion of swimming"),
             ItemKind::Potion(Potion::Vision) => format!("a potion of vision"),
             ItemKind::Barrel => format!("a wooden barrel"),
+            ItemKind::Key => format!("a metal key"),
         }
     }
 
@@ -112,7 +114,11 @@ impl Item {
                 world.messages.push((MessageKind::Skill, "You drink the potion and you feel able to swim."));
                 self.kind = ItemKind::Potion(Potion::Empty);
                 UseResult::Replace
-            }
+            },
+            ItemKind::Key => {
+                // TODO: switch to input mode: select door to unlock
+                UseResult::Cancel
+            },
             _ => UseResult::Cancel
         }
     }
@@ -133,5 +139,6 @@ pub fn item_index(item: &Item) -> usize {
         ItemKind::Potion(Potion::Swimming) => 72,
         ItemKind::Potion(Potion::Vision) => 73,
         ItemKind::Potion(Potion::Empty) => 75,
+        ItemKind::Key => 91,
     }
 }

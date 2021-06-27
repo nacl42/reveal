@@ -256,9 +256,12 @@ pub fn move_by(world: &World, actor_id: &ActorId, dx: i32, dy: i32, follow: bool
     //if !World::is_blocking(&new_pos, &world.terrain, &world.actors) {
     let allow_movement = match world.terrain.get(&new_pos)
         .unwrap_or_default().access() {
-        TerrainAccess::Blocked => false,
-        TerrainAccess::Allowed => true,
-        TerrainAccess::RequireSkill(kind) => actor.has_skill(&kind)
+            TerrainAccess::Blocked => false,
+            TerrainAccess::BlockedWithMessage(msg) => {
+                return Some(Action::DisplayMessage { msg })
+            },
+            TerrainAccess::Allowed => true,
+            TerrainAccess::RequireSkill(kind) => actor.has_skill(&kind)
     };
 
     if allow_movement && !World::actor_blocking(&new_pos, &world.actors) {

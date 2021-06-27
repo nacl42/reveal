@@ -5,7 +5,8 @@
 
 use crate::{
     point::Point,
-    skill::SkillKind
+    skill::SkillKind,
+    message::{MessageKind, Message},
 };
 
 use std::collections::HashMap;
@@ -95,6 +96,9 @@ impl Terrain {
             TerrainKind::Water | TerrainKind::Window
                 => TerrainAccess::Blocked,
             //
+            TerrainKind::Door(DoorState::Locked)
+                => TerrainAccess::BlockedWithMessage("The door is locked!".into()),
+            //
             _
                 => TerrainAccess::Allowed
         }
@@ -104,7 +108,8 @@ impl Terrain {
 pub enum TerrainAccess {
     Allowed,
     Blocked,
-    RequireSkill(SkillKind)
+    BlockedWithMessage(Message),
+    RequireSkill(SkillKind),
 }
 
 impl From<TerrainKind> for Terrain {

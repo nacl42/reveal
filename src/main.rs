@@ -465,11 +465,15 @@ impl MainState {
     }
 
     /// process game actions
+    /// TODO: move game actions into world and treat gui actions separately
     fn update(&mut self, world: &mut World, actions: &mut Vec<Action>) {
         while actions.len() > 0 {
             match actions.pop().unwrap() {
                 Action::Quit => {
                     self.quit = true;
+                },
+                Action::DisplayMessage { msg } => {
+                    world.messages.push(msg);
                 },
                 Action::EndTurn => {
                     self.end_of_turn = get_time();

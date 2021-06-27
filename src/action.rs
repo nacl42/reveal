@@ -1,9 +1,12 @@
 
-use crate::point::Point;
-use crate::actor::ActorId;
-use crate::world::{ViewportMode};
-use crate::item::ItemId;
-use crate::InputMode;
+use crate::{
+    point::Point,
+    actor::ActorId,
+    world::{ViewportMode},
+    item::ItemId,
+    InputMode,
+    message::Message
+};
 
 #[derive(Debug)]
 pub enum Action {
@@ -13,6 +16,7 @@ pub enum Action {
     UseItem { item_id: ItemId, target: ActorId },
     DropItem { item_id: ItemId },
     RunAI { actor_id: ActorId },
+    DisplayMessage { msg: Message },
     Ouch,
     EndTurn,
     Quit,

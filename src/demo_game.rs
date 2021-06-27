@@ -24,6 +24,7 @@ pub fn populate_world(world: &mut World) {
         'W' => TerrainKind::Water,
         '#' => TerrainKind::Wall,
         '~' => TerrainKind::ShallowWater,
+        'd' => TerrainKind::Door(DoorState::Locked),
         'D' => TerrainKind::Door(DoorState::Open),
         '+' => TerrainKind::Window,
         'B' => TerrainKind::Bridge(Orientation::Vertical),
@@ -45,6 +46,8 @@ pub fn populate_world(world: &mut World) {
         .with_owner(player_id);
     let vision_potion = Item::new(ItemKind::Potion(Potion::Vision))
         .with_owner(player_id);
+    let key = Item::new(ItemKind::Key)
+        .with_owner(player_id);
 
     let player = world.actors.get_mut(&player_id).unwrap();
     player.inventory.push(world.items.add(magical_wand));
@@ -52,6 +55,7 @@ pub fn populate_world(world: &mut World) {
     player.inventory.push(world.items.add(healing_potion));
     player.inventory.push(world.items.add(swimming_potion));
     player.inventory.push(world.items.add(vision_potion));
+    player.inventory.push(world.items.add(key));
 
     // spawn some more items on the map (just as an example)
     world.items.add(Item::new(ItemKind::Money(10)).with_pos((5, 6)));
