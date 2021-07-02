@@ -18,14 +18,15 @@ extern crate rand;
 use rand::Rng;
 
 use action::{Action, GuiAction};
-use actor::{Inventory, ActorAI};
+use actor::{Inventory, ActorAI, ActorKind};
 use item::{ItemId, ItemKind};
 use message::{Message, MessageKind, MessageQueue};
 use pattern::Pattern;
-use point::{Point, Rectangle};
+use point::{Point, Rectangle, PointSet};
 use render::{Map, Tileset, Layer, InventoryWidget, egui };
 use world::{World, ViewportMode, adjust_viewport, HighlightMode, RenderMode};
 
+use std::collections::HashSet;
 
 const CRT_FRAGMENT_SHADER: &'static str = include_str!("shaders/vignette_fragment.glsl");
 const CRT_VERTEX_SHADER: &'static str = include_str!("shaders/vignette_vertex.glsl");
@@ -39,7 +40,7 @@ fn window_conf() -> Conf {
         window_title: "Reveal".to_owned(),
         window_width: 1280,
         window_height: 1000,
-        fullscreen: true,
+        //fullscreen: true,
         ..Default::default()
     }
 }
@@ -231,6 +232,7 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
             let pos = world.player_pos();
             let map_pos = pos - state.viewport.top_left();
             if let Some(screen_pos) = state.main_map.tile_to_screen(&map_pos) {
+
                 // TODO: adding the base here is a mess and will eventually
                 // lead to an error. We should consider putting the offset
                 // somewhere, where it is automatically used.
@@ -329,7 +331,24 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
 
     // T => Talk
     if is_key_pressed(KeyCode::T) {
-        
+        // the player can talk to any character which is around her
+        let offsets = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)];
+        if let Some(player) = world.actors.get(&world.player_id()) {
+            let positions = offsets.iter()
+                .map(|offset| player.pos.offset(offset.0, offset.1))
+                .collect::<HashSet<Point>>();
+            dbg!(&positions);
+            let positions = world.actors.iter()
+                .filter(|(_, actor)| positions.contains(&actor.pos))
+                .map(|(_, actor)| actor.pos)
+                .collect::<PointSet>();
+            if positions.len() > 0 {
+                println!("talking: switching to SelectMode with {} positions", positions.len());
+                actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Select { positions })));
+            } else {
+                actions.push(Action::DisplayMessage { msg: "There is no one to talk to close to you.".into() });
+            }
+        }
     }
     
     actions
@@ -370,6 +389,7 @@ pub enum InputMode {
     UseItem { inventory: Inventory, widget: InventoryWidget, hover: Option<ItemId> },
     PickUpItem { inventory: Inventory, widget: InventoryWidget, hover: Option<ItemId> },
     DropItem { inventory: Inventory, widget: InventoryWidget, hover: Option<ItemId> },
+    Select { positions: PointSet }
 }
 
 impl MainState {
@@ -464,9 +484,95 @@ impl MainState {
         Ok(state)
     }
 
-    /// process game actions
+    pub fn read_input(&mut self, world: &mut World, actions: &mut Vec<Action>) {
+        match &mut self.input_mode {
+            InputMode::Default
+                => actions.extend(read_input_default(&self, &world)),
+            InputMode::UseItem { inventory, widget, hover } =>
+                match read_input_from_inventory(&widget, &inventory, &world) {
+                    InventorySelection::Cancel => actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default))),
+                    InventorySelection::Item { item_id } => {
+                        actions.push(Action::UseItem { target: world.player_id(), item_id: item_id });
+                        actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
+                    },
+                    InventorySelection::Hover { item_id } => {
+                        hover.replace(item_id);
+                    },
+                    InventorySelection::None => {
+                        *hover = None;
+                    }
+                },                    
+            InputMode::PickUpItem { inventory, widget, hover } =>
+                match read_input_from_inventory(&widget, &inventory, &world) {
+                    InventorySelection::Cancel => actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default))),
+                    InventorySelection::Item { item_id } => {
+                        // pick up item, remove item from the inventory
+                        // and either keep the state or close the selection
+                        // if the inventory to pick is empty
+                        let actor_id = world.player_id();
+                        world.pick_up(&actor_id, &item_id);
+                        *inventory = inventory.iter()
+                            .filter(|&id| id != &item_id)
+                            .map(|id| id.clone())
+                            .collect::<Vec<ItemId>>();
+
+                        if inventory.len() == 0 {
+                            actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
+                        }
+                    },
+                    InventorySelection::Hover { item_id } => {
+                        hover.replace(item_id);
+                    },
+                    InventorySelection::None => {
+                        *hover = None;
+                    }
+                },
+            InputMode::DropItem { inventory, widget, hover } =>
+                match read_input_from_inventory(&widget, &inventory, &world) {
+                    InventorySelection::Cancel => actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default))),
+                    InventorySelection::Item { item_id } => {
+                        world.drop_item(&item_id);
+                        *inventory = inventory.iter()
+                            .filter(|&id| id != &item_id)
+                            .map(|id| id.clone())
+                            .collect::<Vec<ItemId>>();
+                        
+                        if inventory.len() == 0 {
+                            actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
+                        }
+                    },
+                    InventorySelection::Hover { item_id } => {
+                        hover.replace(item_id);
+                    },
+                    InventorySelection::None => {
+                        *hover = None;
+                    }
+                },
+            InputMode::Select { positions } => {
+                if is_key_pressed(KeyCode::Escape) {
+                    actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
+                };
+
+                if is_mouse_button_pressed(MouseButton::Left) {
+                    // TODO: use map offset, not arbitrary number
+                    let pos = Vec2::from(mouse_position()) - vec2(0.0, 32.0); // - map offset
+                    if let Some(map_pos) = self.main_map.screen_to_tile(&pos) {
+                        let map_pos = map_pos + self.viewport.top_left();
+                        if positions.contains(&map_pos) {
+                            println!("Selected position {:?}", map_pos);
+                            if let Some(actor_id) = world.actor_id_at(&map_pos) {
+                                println!("Hit position {:?} => {:?}", map_pos, actor_id);
+                                // TODO
+                            }
+                        }
+                    };
+                }
+            },            
+        }
+    }
+
     /// TODO: move game actions into world and treat gui actions separately
-    fn update(&mut self, world: &mut World, actions: &mut Vec<Action>) {
+    fn process_actions(&mut self, world: &mut World, actions: &mut Vec<Action>) {
         while actions.len() > 0 {
             match actions.pop().unwrap() {
                 Action::Quit => {
@@ -599,6 +705,7 @@ impl MainState {
                 },
                 Action::GUI(GuiAction::SwitchMode(mode)) => {
                     self.input_mode = mode;
+                    world.highlight_mode = None;
                 }
             }
         }
@@ -607,18 +714,34 @@ impl MainState {
     fn update_fov(&self, world: &mut World) {
         // EXPERIMENTAL: highlight certain tiles by surrounding
         // them with a red rectangle
-        let from = world.player_pos();
-        let points = &mut world.highlights;
-        points.clear();
 
-        // TODO: use map offset, not arbitrary number
-        let pos = Vec2::from(mouse_position()) - vec2(0.0, 32.0); // - map offset
-        if let Some(map_pos) = self.main_map.screen_to_tile(&pos) {
-            let map_pos = map_pos + self.viewport.top_left();
+        match &self.input_mode {
+            InputMode::Select { positions } => {
+                world.highlight_mode = Some(HighlightMode::FOV); // TODO: ::Select
+                world.highlights = positions.clone();
+            },
+            InputMode::Default => {
+                let from = world.player_pos();
+                let points = &mut world.highlights;
+                points.clear();
 
-            for point in from.line_to(&map_pos) {
-                points.insert(point);
-            }
+                match world.highlight_mode {
+                    Some(HighlightMode::FOV) => {
+
+                        // TODO: use map offset, not arbitrary number
+                        let pos = Vec2::from(mouse_position()) - vec2(0.0, 32.0); // - map offset
+                        if let Some(map_pos) = self.main_map.screen_to_tile(&pos) {
+                            let map_pos = map_pos + self.viewport.top_left();
+                            
+                            for point in from.line_to(&map_pos) {
+                                points.insert(point);
+                            }
+                        }
+                    },
+                    _ => {}
+                };
+            },
+            _ => {}
         }
     }
     
@@ -641,7 +764,7 @@ impl MainState {
         
         // select material for map depending on input mode
         match self.input_mode {
-            InputMode::Default
+            InputMode::Default | InputMode::Select { .. }
                 => gl_use_material(self.material_vignette),
             InputMode::UseItem { .. } | InputMode::PickUpItem { .. } | InputMode::DropItem { .. }
             => gl_use_material(self.material_bw),
@@ -764,8 +887,11 @@ impl MainState {
             }
         );
 
-        //
+        // render mode specific stuff
         match &self.input_mode {
+            InputMode::Select { positions } => {
+                
+            },
             InputMode::PickUpItem { inventory, widget, hover }  => {
                 let pos = widget.top_left() - vec2(0.0, self.params_info.font_size as f32); // TODO: height of tile - extra offset
                 let label = match hover {
@@ -834,7 +960,7 @@ async fn main() {
     );
 
     world.messages.push("Welcome to the Land of Mystery...");
-
+    
     while !state.quit {
 
         egui::render_and_update_egui(&mut state, &world);
@@ -847,74 +973,10 @@ async fn main() {
             && (get_time() - state.end_of_turn > DELTA_TURN)
         {
             state.last_input = get_time();
-
-            match &mut state.input_mode {
-                InputMode::Default
-                    => actions.extend(read_input_default(&state, &world)),
-                InputMode::UseItem { inventory, widget, hover } =>
-                    match read_input_from_inventory(&widget, &inventory, &world) {
-                        InventorySelection::Cancel => actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default))),
-                        InventorySelection::Item { item_id } => {
-                            actions.push(Action::UseItem { target: world.player_id(), item_id: item_id });
-                            actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
-                        },
-                        InventorySelection::Hover { item_id } => {
-                            hover.replace(item_id);
-                        },
-                        InventorySelection::None => {
-                            *hover = None;
-                        }
-                    },                    
-                InputMode::PickUpItem { inventory, widget, hover } =>
-                    match read_input_from_inventory(&widget, &inventory, &world) {
-                        InventorySelection::Cancel => actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default))),
-                        InventorySelection::Item { item_id } => {
-                            // pick up item, remove item from the inventory
-                            // and either keep the state or close the selection
-                            // if the inventory to pick is empty
-                            let actor_id = world.player_id();
-                            world.pick_up(&actor_id, &item_id);
-                            *inventory = inventory.iter()
-                                .filter(|&id| id != &item_id)
-                                .map(|id| id.clone())
-                                .collect::<Vec<ItemId>>();
-
-                            if inventory.len() == 0 {
-                                actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
-                            }
-                        },
-                        InventorySelection::Hover { item_id } => {
-                            hover.replace(item_id);
-                        },
-                        InventorySelection::None => {
-                            *hover = None;
-                        }
-                    },
-                InputMode::DropItem { inventory, widget, hover } =>
-                    match read_input_from_inventory(&widget, &inventory, &world) {
-                        InventorySelection::Cancel => actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default))),
-                        InventorySelection::Item { item_id } => {
-                            world.drop_item(&item_id);
-                            *inventory = inventory.iter()
-                                .filter(|&id| id != &item_id)
-                                .map(|id| id.clone())
-                                .collect::<Vec<ItemId>>();
-
-                            if inventory.len() == 0 {
-                                actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
-                            }
-                        },
-                        InventorySelection::Hover { item_id } => {
-                            hover.replace(item_id);
-                        },
-                        InventorySelection::None => {
-                            *hover = None;
-                        }
-                    }
-            }
+            state.read_input(&mut world, &mut actions);
         }
 
-        state.update(&mut world, &mut actions);
+        state.process_actions(&mut world, &mut actions);
         state.update_fov(&mut world);
         state.render(&world);
         world.messages.flush();

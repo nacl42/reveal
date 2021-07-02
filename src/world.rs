@@ -54,6 +54,13 @@ impl World {
         let player = self.actors.get(&id).unwrap();
         player.pos
     }
+
+    pub fn actor_id_at(&self, pos: &Point) -> Option<ActorId> {
+        self.actors.iter()
+            .filter(|(_, actor)| actor.pos == *pos)
+            .map(|(id, _)| id.clone())
+            .next()
+    }
     
     pub fn item_ids_at(&self, pos: &Point) -> Vec<ItemId> {
         self.items.iter()
@@ -116,7 +123,11 @@ impl World {
                             item.pos = Some(owner.pos);
                         }
                     }
-                }
+                },
+                UseResult::Select { positions } => {
+                    // TODO: switch input mode to select
+                    // TODO: supply ItemId
+                },
                 _ => {}
             }
         }

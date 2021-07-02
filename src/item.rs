@@ -1,11 +1,14 @@
 use crate::{
-    point::Point,
+    point::{Point, PointSet},
     actor::{ActorId},
     idmap::{Id, IdMap},
     world::World,
     skill::{Skill, SkillKind, GameTime, SkillDuration},
-    message::MessageKind
+    message::MessageKind,
+    terrain::{TerrainKind, DoorState}
 };
+
+use std::collections::HashSet;
 
 pub type ItemId = Id<Item>;
 pub type ItemMap = IdMap<Item>;
@@ -46,6 +49,7 @@ pub enum UseResult {
     UsedUp,
     Replace,
     Drop,
+    Select { positions: PointSet },
     Cancel
 }
 
@@ -116,9 +120,27 @@ impl Item {
                 UseResult::Replace
             },
             ItemKind::Key => {
-                // TODO: switch to input mode: select door to unlock
-                UseResult::Cancel
-            },
+                // the player can try to open any door which is around her
+                // TODO: extend to objects that could be unlocked such as chests
+                let offsets = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)];
+                if let Some(player) = world.actors.get(&world.player_id()) {
+                    let doors = offsets.iter()
+                        .map(|offset| player.pos.offset(offset.0, offset.1))
+                        .map(|pos| (pos, world.terrain.get(&pos)))
+                        .filter(|(pos, terrain)| terrain.is_some())
+                        .filter(|(pos, terrain)| matches!(terrain.unwrap().kind, TerrainKind::Door(DoorState::Locked)))
+                        .map(|(pos, _)| pos)
+                        .collect::<HashSet<Point>>();
+
+                    if doors.len() > 0 {
+                        println!("use key: switching to SelectMode with {} positions", doors.len());
+                        return UseResult::Select { positions: doors };
+                    } else {
+                        world.messages.push((MessageKind::Info, "There is nothing to unlock around you"));
+                    }
+                }
+                return UseResult::Cancel;
+            }
             _ => UseResult::Cancel
         }
     }
