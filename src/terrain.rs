@@ -26,7 +26,7 @@ impl Default for &Terrain {
             feature: None
         }
     }
-}
+Doo
 
 
 pub type TerrainMap = HashMap<Point, Terrain>;
