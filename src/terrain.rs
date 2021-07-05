@@ -84,27 +84,43 @@ impl Terrain {
     // self.kind.is_blocking(&self), so that the TerrainKind
     // has additional information about the Terrain.
     pub fn is_blocking(&self) -> bool {
-        self.kind.is_blocking(&self)
+        match (&self.kind, self.feature.as_ref()) {
+            (TerrainKind::Hedge, _) |
+            (TerrainKind::Wall, _) |
+            (TerrainKind::Water, _) |
+            (TerrainKind::Window, _) => true,
+            (TerrainKind::ShallowWater, Some(TerrainFeature::Waterlily)) => false,
+            (TerrainKind::ShallowWater, _) => true,
+            (_, Some(TerrainFeature::Fountain)) => false,
+            _ => false,
+        }
     }
 
     // Return access requirements for this Terrain
     pub fn access(&self) ->  TerrainAccess {
-        match self.kind {
-            TerrainKind::ShallowWater
+        match (&self.kind, self.feature.as_ref()) {
+            (TerrainKind::ShallowWater, Some(TerrainFeature::Waterlily))
+                => TerrainAccess::Allowed,
+            (TerrainKind::ShallowWater, _)
                 => TerrainAccess::RequireSkill(SkillKind::Swim),
             //
-            TerrainKind::Hedge | TerrainKind::Wall |
-            TerrainKind::Water | TerrainKind::Window
+            (TerrainKind::Hedge, _) |
+            (TerrainKind::Wall, _) |
+            (TerrainKind::Water, _) |
+            (TerrainKind::Window, _)
                 => TerrainAccess::Blocked,
             //
-            TerrainKind::Door(DoorState::Locked)
+            (TerrainKind::Door(DoorState::Locked), _)
                 => TerrainAccess::BlockedWithMessage("The door is locked!".into()),
             //
+            (_, Some(TerrainFeature::Fountain))
+                => TerrainAccess::BlockedWithMessage("The fountain is in your way.".into()),
             _
                 => TerrainAccess::Allowed
         }
     }
 }
+
 
 pub enum TerrainAccess {
     Allowed,
@@ -141,18 +157,6 @@ impl TerrainKind {
             TerrainKind::ShallowWater =>
                 Some(TerrainFeature::Waterlily),
             _ => None
-        }
-    }
-
-    pub fn is_blocking(&self, terrain: &Terrain) -> bool {
-        match self {
-            TerrainKind::Hedge | TerrainKind::Wall |
-            TerrainKind::Water | TerrainKind::Window => true,
-            TerrainKind::ShallowWater
-                if terrain.feature.as_ref().map(|f| f == &TerrainFeature::Waterlily).is_some()
-                => false,
-            TerrainKind::ShallowWater => true,
-            _ => false
         }
     }
 }
