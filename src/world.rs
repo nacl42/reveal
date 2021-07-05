@@ -6,7 +6,8 @@ use crate::{
     terrain::{Terrain, TerrainMap, TerrainKind, TerrainAccess},
     action::Action,
     skill::SkillKind,
-    message::{Message, MessageQueue, MessageKind}
+    message::{Message, MessageQueue, MessageKind},
+    InputMode,       
 };
 
 use std::collections::HashMap;
@@ -92,7 +93,7 @@ impl World {
             .any(|(_, actor)| actor.pos == *pos)
     }
 
-    pub fn use_item(&mut self, item_id: &ItemId, target: &ActorId) {
+    pub fn use_item(&mut self, item_id: &ItemId, target: &ActorId) -> InputMode {
         if let Some(item) = self.items.get(&item_id) {
             let mut item = item.clone();
             match item.use_item(self, &target) {
@@ -125,12 +126,12 @@ impl World {
                     }
                 },
                 UseResult::Select { positions } => {
-                    // TODO: switch input mode to select
-                    // TODO: supply ItemId
+                    return InputMode::SelectUse { positions, item_id: *item_id };
                 },
                 _ => {}
             }
         }
+        InputMode::Default
     }
 
     pub fn drop_item(&mut self, item_id: &ItemId) {

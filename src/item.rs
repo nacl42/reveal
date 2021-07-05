@@ -90,6 +90,29 @@ impl Item {
         }
     }
 
+    // defined as function so that we can alter the item
+    pub fn use_item_on(world: &mut World, item_id: &ItemId, target: &ActorId, pos: &Point) {
+        if let Some(item) = world.items.get(&item_id) {
+            if let Some(target) = world.actors.get(&target) {
+                match item.kind {
+                    ItemKind::Key => {
+                        if let Some(terrain) = world.terrain.get_mut(&pos) {
+                            if matches!(terrain.kind, TerrainKind::Door(_)) {
+                                if terrain.kind == TerrainKind::Door(DoorState::Open) {
+                                    world.messages.push(format!("The door is already open, no need to unlock anything."));
+                                } else {
+                                    terrain.kind = TerrainKind::Door(DoorState::Open);
+                                    world.messages.push(format!("You unlock the door"));
+                                }
+                            }
+                        }
+                    },
+                    _ => {}
+                }
+            }
+        }
+    }
+    
     pub fn use_item(&mut self, world: &mut World, target: &ActorId) -> UseResult {
         match self.kind {
             ItemKind::Potion(Potion::Healing) => {
@@ -133,7 +156,7 @@ impl Item {
                         .collect::<HashSet<Point>>();
 
                     if doors.len() > 0 {
-                        println!("use key: switching to SelectMode with {} positions", doors.len());
+                        println!("use key: switching to Select mode with {} positions", doors.len());
                         return UseResult::Select { positions: doors };
                     } else {
                         world.messages.push((MessageKind::Info, "There is nothing to unlock around you"));

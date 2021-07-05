@@ -19,7 +19,7 @@ use rand::Rng;
 
 use action::{Action, GuiAction};
 use actor::{Inventory, ActorAI, ActorKind};
-use item::{ItemId, ItemKind};
+use item::{Item, ItemId, ItemKind};
 use message::{Message, MessageKind, MessageQueue};
 use pattern::Pattern;
 use point::{Point, Rectangle, PointSet};
@@ -344,7 +344,7 @@ fn read_input_default(state: &MainState, world: &World) -> Vec<Action> {
                 .collect::<PointSet>();
             if positions.len() > 0 {
                 println!("talking: switching to SelectMode with {} positions", positions.len());
-                actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Select { positions })));
+                actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::SelectTalk { positions })));
             } else {
                 actions.push(Action::DisplayMessage { msg: "There is no one to talk to close to you.".into() });
             }
@@ -389,7 +389,8 @@ pub enum InputMode {
     UseItem { inventory: Inventory, widget: InventoryWidget, hover: Option<ItemId> },
     PickUpItem { inventory: Inventory, widget: InventoryWidget, hover: Option<ItemId> },
     DropItem { inventory: Inventory, widget: InventoryWidget, hover: Option<ItemId> },
-    Select { positions: PointSet }
+    SelectTalk { positions: PointSet }, // assume that one talking partner is always the player itself
+    SelectUse { positions: PointSet, item_id: ItemId }
 }
 
 impl MainState {
@@ -548,7 +549,7 @@ impl MainState {
                         *hover = None;
                     }
                 },
-            InputMode::Select { positions } => {
+            InputMode::SelectTalk { positions } => {
                 if is_key_pressed(KeyCode::Escape) {
                     actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
                 };
@@ -570,7 +571,26 @@ impl MainState {
                         }
                     };
                 }
+            },
+            InputMode::SelectUse { positions, item_id } => {
+                if is_key_pressed(KeyCode::Escape) {
+                    actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
+                };
+
+                if is_mouse_button_pressed(MouseButton::Left) {
+                    // TODO: use map offset, not arbitrary number
+                    let pos = Vec2::from(mouse_position()) - vec2(0.0, 32.0); // - map offset
+                    if let Some(map_pos) = self.main_map.screen_to_tile(&pos) {
+                        let map_pos = map_pos + self.viewport.top_left();
+                        if positions.contains(&map_pos) {
+                            println!("Selected position {:?}", map_pos);
+                            Item::use_item_on(world, &item_id, &world.player_id(), &map_pos);
+                            actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
+                        }
+                    };
+                }
             },            
+
         }
     }
 
@@ -646,8 +666,7 @@ impl MainState {
                     }  
                 },
                 Action::UseItem { item_id, target } => {
-                    world.use_item(&item_id, &target);
-                    self.input_mode = InputMode::Default;
+                    self.input_mode = world.use_item(&item_id, &target);
                 },
                 Action::DropItem { item_id } => {
                     world.drop_item(&item_id);
@@ -719,7 +738,11 @@ impl MainState {
         // them with a red rectangle
 
         match &self.input_mode {
-            InputMode::Select { positions } => {
+            InputMode::SelectTalk { positions } => {
+                world.highlight_mode = Some(HighlightMode::FOV); // TODO: ::Select
+                world.highlights = positions.clone();
+            },
+            InputMode::SelectUse { positions, item_id } => {
                 world.highlight_mode = Some(HighlightMode::FOV); // TODO: ::Select
                 world.highlights = positions.clone();
             },
@@ -767,7 +790,7 @@ impl MainState {
         
         // select material for map depending on input mode
         match self.input_mode {
-            InputMode::Default | InputMode::Select { .. }
+            InputMode::Default | InputMode::SelectTalk { .. } | InputMode::SelectUse { .. }
                 => gl_use_material(self.material_vignette),
             InputMode::UseItem { .. } | InputMode::PickUpItem { .. } | InputMode::DropItem { .. }
             => gl_use_material(self.material_bw),
@@ -892,7 +915,10 @@ impl MainState {
 
         // render mode specific stuff
         match &self.input_mode {
-            InputMode::Select { positions } => {
+            InputMode::SelectTalk { positions } => {
+                
+            },
+            InputMode::SelectUse { positions, item_id } => {
                 
             },
             InputMode::PickUpItem { inventory, widget, hover }  => {
