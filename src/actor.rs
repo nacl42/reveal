@@ -107,6 +107,17 @@ impl Actor {
             ActorKind::Shopkeeper => format!("a shopkeeper"),
         }
     }
+
+    pub fn quip(&self) -> Option<String> {
+        match self.kind {
+            ActorKind::Shopkeeper => Some(format!("The shopkeeper greets you and offers you some valuable goods.")),
+            ActorKind::Cat => Some(format!("MEOW!")),
+            ActorKind::Dog => Some(format!("WOOF!")),
+            ActorKind::Townsfolk => Some(format!("» Nice to meet you! «, says the townsman.")),
+            ActorKind::Player => Some(format!("Talking to yourself, eh?")),
+            _ => None
+        }
+    }
 }
 
 

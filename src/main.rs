@@ -562,7 +562,10 @@ impl MainState {
                             println!("Selected position {:?}", map_pos);
                             if let Some(actor_id) = world.actor_id_at(&map_pos) {
                                 println!("Hit position {:?} => {:?}", map_pos, actor_id);
-                                // TODO
+                                if let Some(actor) = world.actors.get(&actor_id) {
+                                    actions.push(Action::DisplayMessage { msg: actor.quip().unwrap_or_else(|| format!("no answer...")).into() });
+                                };
+                                actions.push(Action::GUI(GuiAction::SwitchMode(InputMode::Default)));
                             }
                         }
                     };
