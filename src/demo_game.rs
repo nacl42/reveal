@@ -1,7 +1,7 @@
 use crate::{
     world::World,
     actor::{Actor, ActorId, ActorKind, ActorAI},
-    terrain::{TerrainKind, DoorState, Orientation},
+    terrain::{TerrainKind, DoorState, Orientation, TerrainFeature},
     item::*,
     point::Point,
     terrain::read_from_file
@@ -15,7 +15,7 @@ use maplit::hashmap;
 
 pub fn populate_world(world: &mut World) {
     // read map from file
-    let map = hashmap! {
+    let kind_map = hashmap! {
         '.' => TerrainKind::Grass,
         '*' => TerrainKind::Hedge,
         ':' => TerrainKind::StoneFloor,
@@ -29,9 +29,14 @@ pub fn populate_world(world: &mut World) {
         '+' => TerrainKind::Window,
         'B' => TerrainKind::Bridge(Orientation::Vertical),
         'b' => TerrainKind::Bridge(Orientation::Horizontal),
+        'f' => TerrainKind::Grass,
+    };
+
+    let feature_map = hashmap! {
+        'f' => TerrainFeature::Fountain,
     };
     
-    world.terrain = read_from_file("assets/sample.layer", &map).unwrap();
+    world.terrain = read_from_file("assets/sample.layer", &kind_map, &feature_map).unwrap();
 
     let player_id = world.player_id();
     

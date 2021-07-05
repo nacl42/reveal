@@ -5,7 +5,7 @@ use crate::{
     world::World,
     skill::{Skill, SkillKind, GameTime, SkillDuration},
     message::MessageKind,
-    terrain::{TerrainKind, DoorState}
+    terrain::{TerrainKind, DoorState, TerrainFeature}
 };
 
 use std::collections::HashSet;
@@ -107,6 +107,18 @@ impl Item {
                             }
                         }
                     },
+                    ItemKind::Potion(Potion::Empty) => {
+                        if let Some(terrain) = world.terrain.get(&pos) {
+                            if terrain.feature == Some(TerrainFeature::Fountain) {
+                                world.items.replace(&item_id, Item::new(ItemKind::Potion(Potion::Healing)));
+                                world.messages.push(format!("You fill up the empty bottle with the healing water."));
+                            } else {
+                                world.messages.push(format!("Nothing to fill up the bottle..."));
+                            }
+                        } else {
+                            world.messages.push(format!("Nothing here!"));
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -132,8 +144,26 @@ impl Item {
                 UseResult::Replace
             },
             ItemKind::Potion(Potion::Empty) => {
-                world.messages.push("Not much use for an empty bottle. Away with it!");
-                UseResult::UsedUp
+                world.messages.push("Not much use for an empty bottle. Maybe you could fill it up with some liquid...?");
+                // the player can try to fill up the bottle with anything around her
+                let offsets = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1, 1)];
+                if let Some(player) = world.actors.get(&world.player_id()) {
+                    let positions = offsets.iter()
+                        .map(|offset| player.pos.offset(offset.0, offset.1))
+                        .map(|pos| (pos, world.terrain.get(&pos)))
+                        .filter(|(pos, terrain)| terrain.is_some())
+                        //.filter(|(pos, terrain)| matches!(terrain.unwrap().kind, TerrainKind::Door(DoorState::Locked)))
+                        .map(|(pos, _)| pos)
+                        .collect::<HashSet<Point>>();
+
+                    if positions.len() > 0 {
+                        println!("use potion: switching to Select mode with {} positions", positions.len());
+                        return UseResult::Select { positions };
+                    } else {
+                        world.messages.push((MessageKind::Info, "There is nothing to fill up your bottle with around you"));
+                    }
+                }
+                UseResult::Cancel
             },
             ItemKind::Potion(Potion::Swimming) => {
                 let actor = world.actors.get_mut(target).unwrap();

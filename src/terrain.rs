@@ -26,7 +26,7 @@ impl Default for &Terrain {
             feature: None
         }
     }
-Doo
+}
 
 
 pub type TerrainMap = HashMap<Point, Terrain>;
@@ -62,7 +62,8 @@ pub enum TerrainFeature {
     Mushroom,
     Flower(u8),
     Waterlily,
-    Stones
+    Stones,
+    Fountain
 }
 
 impl Terrain {
@@ -164,7 +165,9 @@ impl TerrainKind {
 /// For each tile, there's a 5% chance that a random decor is added
 /// (if available).
 #[allow(unused_assignments)]
-pub fn read_from_file<P>(path: P, map: &HashMap<char, TerrainKind>)
+    pub fn read_from_file<P>(path: P,
+                             kind_map: &HashMap<char, TerrainKind>,
+                             feature_map: &HashMap<char, TerrainFeature>)
                                  -> Result<TerrainMap, std::io::Error>
 where P: AsRef<std::path::Path>
 {
@@ -177,10 +180,16 @@ where P: AsRef<std::path::Path>
     for row in text.lines() {
         x = 0;
         for ch in row.chars() {
-            if let Some(kind) = map.get(&ch) {
+            if let Some(kind) = kind_map.get(&ch) {
                 let mut terrain = Terrain::from(kind);
-                if rng.gen::<f32>() > 0.95 {
-                    terrain.set_random_decor();
+                if let Some(feature) = feature_map.get(&ch) {
+                    terrain.feature = Some(feature.clone());
+                } else {
+                    // if no feature was specified, we have a 5% chance
+                    // to pick a random decor (=non-functional feature)
+                    if rng.gen::<f32>() > 0.95 {
+                        terrain.set_random_decor();
+                    }
                 }
                 hashmap.insert((x, y).into(), terrain);
             }
@@ -217,7 +226,8 @@ pub fn feature_index(tile: &Terrain) -> Option<usize> {
             TerrainFeature::Mushroom => 20,
             TerrainFeature::Flower(n) => (40 + (n % 4) as usize),
             TerrainFeature::Stones => 10,
-            TerrainFeature::Waterlily => 30
+            TerrainFeature::Waterlily => 30,
+            TerrainFeature::Fountain => 1,
         };
         Some(index)
     } else {
